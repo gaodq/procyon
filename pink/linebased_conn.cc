@@ -9,6 +9,7 @@ bool LineBasedConn::OnDataAvailable(size_t size) {
       handler_->HandleMessage(this, new_line);
     }
   }
+  
   return true;
 }
 

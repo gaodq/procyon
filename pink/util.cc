@@ -1,9 +1,10 @@
-#include "src/util.h"
+#include "pink/util.h"
 
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <netinet/tcp.h>
 
 namespace pink {
 namespace util {
@@ -32,7 +33,14 @@ int SetNonblocking(int fd) {
     close(fd);
     return -1;
   }
-  return flags;
+  return 0;
+}
+
+int SetNoDelay(int fd) {
+  int val = 1;
+  int ret = 0;
+  ret = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val));
+  return ret;
 }
 
 }  // namespace util

@@ -31,7 +31,6 @@ class Connection {
 
  protected:
   char read_buf_[4096];
-  size_t buf_pos_;
 
  private:
   friend class Dispatcher;

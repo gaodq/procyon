@@ -30,7 +30,7 @@ endif
 
 #-----------------------------------------------
 
-SRC_DIR=src
+SRC_DIR=pink
 VERSION_CC=$(SRC_DIR)/build_version.cc
 LIB_SOURCES :=  $(VERSION_CC) \
 				$(filter-out $(VERSION_CC), $(wildcard $(SRC_DIR)/*.cc))

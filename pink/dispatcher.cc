@@ -1,7 +1,7 @@
-#include "src/dispatcher.h"
+#include "pink/dispatcher.h"
 
-#include "src/util.h"
-#include "src/xdebug.h"
+#include "pink/util.h"
+#include "pink/xdebug.h"
 
 namespace pink {
 
@@ -31,6 +31,7 @@ bool Dispatcher::Bind() {
 }
 
 void Dispatcher::OnNewConnection() {
+  log_info("New connection");
   struct sockaddr_in cliaddr;
   socklen_t clilen = sizeof(struct sockaddr);
   int connfd = accept(server_socket_.fd(), (struct sockaddr *) &cliaddr, &clilen);
@@ -39,8 +40,15 @@ void Dispatcher::OnNewConnection() {
              errno, strerror(errno));
     return;
   }
-  util::SetFdCloseExec(connfd);
-  util::SetNonblocking(connfd);
+  int ret;
+  ret = util::SetFdCloseExec(connfd);
+  if (ret != 0) {
+    log_warn("SetFdCloseExec failed");
+  }
+  ret = util::SetNonblocking(connfd);
+  if (ret != 0) {
+    log_warn("SetNonblocking failed");
+  }
 
   auto t = worker_threads_->NextThread();
 

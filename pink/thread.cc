@@ -1,7 +1,7 @@
 #include "pink/thread.h"
 
-#include "src/util.h"
-#include "src/xdebug.h"
+#include "pink/util.h"
+#include "pink/xdebug.h"
 
 namespace pink {
 

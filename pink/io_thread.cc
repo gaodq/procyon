@@ -1,6 +1,6 @@
 #include <thread>
 
-#include "src/io_thread.h"
+#include "pink/io_thread.h"
 
 namespace pink {
 

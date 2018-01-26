@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "pink/thread.h"
-#include "src/eventbase_loop.h"
+#include "pink/eventbase_loop.h"
 
 namespace pink {
 

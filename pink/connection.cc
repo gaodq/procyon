@@ -3,9 +3,9 @@
 #include <unistd.h>
 #include <stdio.h>
 
-#include "src/dispatcher.h"
-#include "src/eventbase_loop.h"
-#include "src/io_thread.h"
+#include "pink/dispatcher.h"
+#include "pink/eventbase_loop.h"
+#include "pink/io_thread.h"
 
 namespace pink {
 
@@ -28,8 +28,7 @@ struct Connection::IoHandler : public EventHandler {
 };
 
 Connection::Connection()
-    : buf_pos_(0),
-      io_handler_(new IoHandler(this)) {
+    : io_handler_(new IoHandler(this)) {
 }
 
 bool Connection::InitConnection(int fd, std::shared_ptr<IOThread> io_thread,
@@ -43,7 +42,7 @@ bool Connection::InitConnection(int fd, std::shared_ptr<IOThread> io_thread,
 
 void Connection::PerformRead() {
   while (true) {
-    ssize_t rn = read(fd_, read_buf_ + buf_pos_, 4096 - buf_pos_);
+    ssize_t rn = read(fd_, read_buf_, 4096);
     if (rn < 0) {
       if (errno == EAGAIN) {
         return;

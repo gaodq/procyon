@@ -5,15 +5,15 @@
 
 #include "pink/connection.h"
 #include "pink/server.h"
-#include "src/eventbase_loop.h"
-#include "src/io_thread.h"
-#include "src/server_socket.h"
+#include "pink/eventbase_loop.h"
+#include "pink/io_thread.h"
+#include "pink/server_socket.h"
 
 namespace pink {
 
 class Dispatcher {
  public:
-  Dispatcher(const ServerOptions& options);
+  explicit Dispatcher(const ServerOptions& options);
 
   bool Bind();
 

@@ -1,9 +1,9 @@
-#include "src/server_socket.h"
+#include "pink/server_socket.h"
 
 #include <map>
 
-#include "src/xdebug.h"
-#include "src/util.h"
+#include "pink/xdebug.h"
+#include "pink/util.h"
 
 namespace pink {
 

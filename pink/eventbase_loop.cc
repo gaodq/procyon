@@ -1,10 +1,10 @@
-#include "src/eventbase_loop.h"
+#include "pink/eventbase_loop.h"
 
 #include <linux/version.h>
 #include <fcntl.h>
 
-#include "src/xdebug.h"
-#include "src/util.h"
+#include "pink/xdebug.h"
+#include "pink/util.h"
 
 namespace pink {
 

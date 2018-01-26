@@ -9,6 +9,7 @@ namespace pink {
 
 class IOThread;
 class IOThreadPool;
+class Dispatcher;
 
 struct ServerOptions {
   std::string listen_ip;
@@ -20,12 +21,10 @@ struct ServerOptions {
 
 class Server {
  public:
-  int Bind(const std::string& ip, int port);
-  int Bind(int port) {
-    return Bind("0.0.0.0", port);
-  }
-  int StartUntilInterrupt();
-  int Interrupt();
+  bool Start(const ServerOptions& opts);
+
+ private:
+  std::shared_ptr<Dispatcher> dispatcher_;
 };
 
 }  // namespace pink

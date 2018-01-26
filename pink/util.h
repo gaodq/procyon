@@ -10,6 +10,7 @@ namespace util {
 int SetReuseAddr(int fd);
 int SetNonblocking(int fd);
 int SetFdCloseExec(int fd);
+int SetNoDelay(int fd);
 
 #if defined(__GLIBC__) && !defined(__APPLE__) && !defined(__ANDROID__)
 # if __GLIBC_PREREQ(2, 12)
