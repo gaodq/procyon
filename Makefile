@@ -105,7 +105,8 @@ else
         LIBNAME=libpink_debug
 endif
 endif
-LIBOUTPUT = ./lib
+OUTPUT = output
+LIBOUTPUT = $(OUTPUT)/lib
 dummy := $(shell mkdir -p $(LIBOUTPUT))
 LIBRARY = $(LIBOUTPUT)/${LIBNAME}.a
 
@@ -114,8 +115,8 @@ TESTS = test/pink_thread_test
 .PHONY: clean dbg static_lib all example
 
 all: $(LIBRARY)
-
-static_lib: $(LIBRARY)
+	$(AM_V_at)mkdir -p $(OUTPUT)/include/pink
+	$(AM_V_at)cp -r pink/*.h $(OUTPUT)/include/pink
 
 # example:
 # 	@make -C examples PINK_PATH=$(CURDIR)/.. DEBUG_LEVEL=$(DEBUG_LEVEL)
@@ -125,16 +126,16 @@ static_lib: $(LIBRARY)
 # 	for t in $(notdir $(TESTS)); do echo "***** Running $$t"; ./test/$$t || exit 1; done
 
 dbg: $(LIBRARY)
+	$(AM_V_at)mkdir -p $(OUTPUT)/include/pink
+	$(AM_V_at)cp -r pink/*.h $(OUTPUT)/include/pink
 
 $(LIBRARY): $(LIBOBJECTS)
-	$(AM_V_AR)rm -f $@
+	$(AM_V_at)rm -f $@
 	$(AM_V_at)$(AR) $(ARFLAGS) $@ $(LIBOBJECTS)
 
 clean:
-	make -C ./examples clean
-	rm -f $(LIBRARY)
+	rm -rf $(OUTPUT)
 	rm -rf $(CLEAN_FILES)
-	rm -rf $(LIBOUTPUT)
 	rm -f $(TESTS)
 	find . -name "*.[oda]*" ! -path "./third/*" -exec rm -f {} \;
 	find . -type f -regex ".*\.\(\(gcda\)\|\(gcno\)\)" -exec rm {} \;

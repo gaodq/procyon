@@ -1,2 +1,6 @@
 tags
 *.out
+**.d
+**.o
+output
+pink/build_version.cc
