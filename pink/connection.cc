@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <assert.h>
 
 #include "pink/dispatcher.h"
 #include "pink/eventbase_loop.h"
@@ -9,15 +10,14 @@
 
 namespace pink {
 
-struct Connection::IoHandler : public EventHandler {
-  explicit IoHandler(Connection* c) : conn(c) {}
+struct Connection::IOHandler : public EventHandler {
+  explicit IOHandler(Connection* c) : conn(c) {}
 
   void HandleReady(uint32_t events) override {
     if (events == kRead) {
       conn->PerformRead();
-    } else if (events == kWrite) {
-      conn->PerformWrite();
-    } else if (events == kReadWrite) {
+    } else if (events == kWrite ||
+               events == kReadWrite) {
       conn->PerformWrite();
     } else {
       conn->Close();
@@ -28,7 +28,7 @@ struct Connection::IoHandler : public EventHandler {
 };
 
 Connection::Connection()
-    : io_handler_(new IoHandler(this)) {
+    : io_handler_(new IOHandler(this)) {
 }
 
 bool Connection::InitConnection(int fd, std::shared_ptr<IOThread> io_thread,
@@ -42,17 +42,20 @@ bool Connection::InitConnection(int fd, std::shared_ptr<IOThread> io_thread,
 
 void Connection::PerformRead() {
   while (true) {
-    ssize_t rn = read(fd_, read_buf_, 4096);
+    void* buffer;
+    size_t len;
+    GetReadBuffer(&buffer, &len);
+    ssize_t rn = read(fd_, buffer, len);
     if (rn < 0) {
-      if (errno == EAGAIN) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
         return;
       }
-      dispatcher_->error_cb_(this);
+      dispatcher_->OnConnError(this);
       break;
     } else if (rn > 0) {
       bool r = OnDataAvailable(rn);
       if (!r) {
-        dispatcher_->error_cb_(this);
+        dispatcher_->OnConnError(this);
         break;
       }
     } else {
@@ -63,18 +66,63 @@ void Connection::PerformRead() {
   Close();
 }
 
-void Connection::PerformWrite() {
+ssize_t Connection::WriteImpl(const char* msg, size_t size) {
+  size_t sended = 0;
+  while (sended < size) {
+    ssize_t wn = write(fd_, msg + sended, size - sended);
+    if (wn > 0) {
+      sended += wn;
+    } else if (wn == -1 && errno == EINTR) {
+    } else if (wn == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+      io_handler_->EnableWrite();
+      break;
+    } else {
+      return -1;
+    }
+  }
+  return sended;
 }
 
-int Connection::Write(const char* msg, size_t size) {
-  ssize_t wn = write(fd_, msg, size);
+void Connection::PerformWrite() {
+  assert(!pending_output_.empty());
+  while (!pending_output_.empty()) {
+    const std::string& buf = pending_output_.front();
+    ssize_t sended = WriteImpl(buf.data(), buf.size());
+    if (sended < 0) {
+      // Error
+    } else {
+      std::string remain;
+      if (sended < static_cast<ssize_t>(buf.size())) {
+        remain.assign(buf.data() + sended + 1, buf.size() - sended - 1);
+      }
+      pending_output_.pop_front();
+      if (!remain.empty()) {
+        pending_output_.emplace_front(remain);
+      }
+    }
+  }
+}
 
-  return wn;
+bool Connection::Write(const char* msg, size_t size) {
+  if (!pending_output_.empty()) {
+    pending_output_.emplace_back(std::string(msg, size));
+    io_handler_->EnableWrite();
+  } else {
+    ssize_t sended = WriteImpl(msg, size);
+
+    if (sended < 0) {
+      return false;
+    } else if (sended < static_cast<ssize_t>(size)) {
+      pending_output_.emplace_back(std::string(msg + sended, size - sended));
+    }
+  }
+
+  return true;
 }
 
 void Connection::Close(/* CLOSEREASON reason */) {
   // Connection closed by peer
-  dispatcher_->close_cb_(this);
+  dispatcher_->OnConnClosed(this);
 }
 
 }  // namespace pink

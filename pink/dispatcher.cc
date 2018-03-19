@@ -62,7 +62,13 @@ void Dispatcher::OnNewConnection() {
 
 void Dispatcher::OnConnClosed(Connection* conn) {
   // TODO run in loop
+  log_info("Connection: %d closed", conn->fd());
   connections_.erase(conn->fd());
+}
+
+void Dispatcher::OnConnError(Connection* conn) {
+  connections_.erase(conn->fd());
+  log_info("Connection: %d error", conn->fd());
 }
 
 }  // namespace pink

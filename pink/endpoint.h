@@ -1,5 +1,4 @@
-#ifndef PINK_ENDPOINT_H_
-#define PINK_ENDPOINT_H_
+#pragma once
 
 #include <string>
 
@@ -36,4 +35,3 @@ bool HostnameToEndPoint(const char* hostname, int port, EndPoint* ep);
 bool HostnameToEndPoint(const std::string hostname, int port, EndPoint* ep);
 
 };  // namespace pink
-#endif  // PINK_ENDPOINT_H_

@@ -1,6 +1,7 @@
 #include "pink/iobuf.h"
 
 #include <string.h>
+#include <assert.h>
 #include <stdlib.h>
 
 namespace pink {
@@ -27,6 +28,11 @@ IOBuf::IOBuf()
 }
 
 IOBuf::~IOBuf() {
+  while (next_ != this) {
+    IOBuf* buf = next_;
+    next_ = next_->next_;
+    buf->Unref();
+  }
   Unref();
 }
 
@@ -36,8 +42,11 @@ void IOBuf::Ref() {
 
 void IOBuf::Unref() {
   ref_count_--;
-  if (ref_count_ == 0 && own_buffer_) {
-    delete buffer_;
+  if (ref_count_ == 0) {
+    if (own_buffer_) {
+      delete buffer_;
+    }
+    delete this;
   }
 }
 
@@ -65,10 +74,10 @@ size_t IOBuf::AllocateMem(size_t min_size) {
 }
 
 std::pair<char*, int> IOBufQueue::Allocate(size_t min_size) {
-  IOBuf iobuf;
-  size_t size = iobuf.AllocateMem(min_size);
-  append(&iobuf);
-  return std::make_pair(iobuf.data(), size);
+  IOBuf* iobuf = new IOBuf();
+  size_t size = iobuf->AllocateMem(min_size);
+  append(iobuf);
+  return std::make_pair(iobuf->data(), size);
 }
 
 void IOBufQueue::append(const std::string& buf) {
@@ -80,11 +89,12 @@ void IOBufQueue::append(const char* s) {
 }
 
 void IOBufQueue::append(const char* buf, size_t size) {
-  IOBuf iobuf(buf, size);
-  append(&iobuf);
+  IOBuf* iobuf = new IOBuf(buf, size);
+  append(iobuf);
 }
 
 void IOBufQueue::append(IOBuf* buf) {
+  assert(buf != nullptr);
   buf->Ref();
   if (!head_) {
     head_.reset(buf);

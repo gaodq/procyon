@@ -1,5 +1,4 @@
-#ifndef PINK_THREAD_H_
-#define PINK_THREAD_H_
+#pragma once
 
 #include <pthread.h>
 #include <string>
@@ -48,4 +47,3 @@ class Thread {
 };
 
 }  // namespace pink
-#endif  // PINK_THREAD_H_

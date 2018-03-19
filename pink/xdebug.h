@@ -6,8 +6,8 @@
  * @date 2014-04-25
  */
 
-#ifndef  __XDEBUG_H_
-#define  __XDEBUG_H_
+#pragma once
+
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -61,7 +61,3 @@
 #define log_info(M, ...) {}
 
 #endif
-
-#endif  //__XDEBUG_H_
-
-/* vim: set ts=4 sw=4 sts=4 tw=100 */

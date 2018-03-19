@@ -1,5 +1,4 @@
-#ifndef PINK_SOCKET_H_
-#define PINK_SOCKET_H_
+#pragma once
 
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -31,6 +30,4 @@ class ServerSocket {
   int tcp_recv_buffer_;
 };
 
-
 }  // namespace pink
-#endif  // PINK_SOCKET_H_

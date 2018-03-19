@@ -1,5 +1,4 @@
-#ifndef PINK_IOTHREAD_H_
-#define PINK_IOTHREAD_H_
+#pragma once
 
 #include <memory>
 #include <vector>
@@ -39,4 +38,3 @@ class IOThreadPool {
 };
 
 }  // namespace pink
-#endif  // PINK_SOCKET_H_

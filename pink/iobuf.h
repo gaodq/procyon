@@ -1,5 +1,4 @@
-#ifndef PINK_IOBUF_H_
-#define PINK_IOBUF_H_
+#pragma once
 
 #include <pthread.h>
 #include <string>
@@ -60,5 +59,3 @@ class IOBufQueue {
 };
 
 }  // namespace pink
-#endif  // PINK_IOBUF_H_
-

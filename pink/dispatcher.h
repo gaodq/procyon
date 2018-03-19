@@ -1,5 +1,4 @@
-#ifndef PINK_DISPATCHER_H_
-#define PINK_DISPATCHER_H_
+#pragma once
 
 #include <unordered_map>
 
@@ -19,6 +18,7 @@ class Dispatcher {
 
   void OnNewConnection();
   void OnConnClosed(Connection* conn);
+  void OnConnError(Connection* conn);
 
   struct AcceptHandler : EventHandler {
     explicit AcceptHandler(Dispatcher* d) : dispacher(d) {}
@@ -30,15 +30,15 @@ class Dispatcher {
     Dispatcher* dispacher;
   };
 
-  std::function<void(Connection*)> error_cb_;
-  std::function<void(Connection*)> close_cb_;
-
  private:
   const std::string ip_;
   const int port_;
 
   std::shared_ptr<IOThread> accept_thread_;
   std::shared_ptr<IOThreadPool> worker_threads_;
+
+  std::function<void(Connection*)> error_cb_;
+  std::function<void(Connection*)> close_cb_;
 
   ServerSocket server_socket_;
   std::unordered_map<int, std::shared_ptr<Connection>> connections_;
@@ -48,4 +48,3 @@ class Dispatcher {
 };
 
 }  // namespace pink
-#endif  // PINK_CONN_MANAGER_H_

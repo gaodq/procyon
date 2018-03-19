@@ -1,5 +1,4 @@
-#ifndef PINK_UTIL_H_
-#define PINK_UTIL_H_
+#pragma once
 
 #include <pthread.h>
 #include <string>
@@ -33,5 +32,3 @@ inline bool SetThreadName(pthread_t id, const std::string& name) {
 
 }  // namespace util
 }  // namespace pink
-
-#endif  //  PINK_UTIL_H_

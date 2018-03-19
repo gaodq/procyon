@@ -1,5 +1,4 @@
-#ifndef PINK_SERVER_H_
-#define PINK_SERVER_H_
+#pragma once
 
 #include <string>
 
@@ -28,5 +27,3 @@ class Server {
 };
 
 }  // namespace pink
-
-#endif  // PINK_SERVER_H_

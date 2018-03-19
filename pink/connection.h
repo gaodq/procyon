@@ -1,7 +1,7 @@
-#ifndef PINK_CONNECTION_H_
-#define PINK_CONNECTION_H_
+#pragma once
 
 #include <memory>
+#include <list>
 
 namespace pink {
 
@@ -10,7 +10,7 @@ class IOThread;
 
 class Connection {
  public:
-  struct IoHandler;
+  struct IOHandler;
 
   Connection();
   virtual ~Connection() {}
@@ -21,25 +21,28 @@ class Connection {
 
   bool Connect() { return true; } // For client
 
-  void PerformRead();
-  void PerformWrite();
-  int Write(const char* msg, size_t size);
+  bool Write(const char* msg, size_t size);
 
+  virtual void GetReadBuffer(void** buffer, size_t* len) = 0;
   virtual bool OnDataAvailable(size_t size) = 0;
 
   void Close();
 
- protected:
-  char read_buf_[4096];
-
  private:
   friend class Dispatcher;
 
+  void PerformRead();
+  void PerformWrite();
+
+  ssize_t WriteImpl(const char* msg, size_t size);
+
   int fd_;
   std::shared_ptr<IOThread> io_thread_;
-  std::shared_ptr<IoHandler> io_handler_;
+  std::shared_ptr<IOHandler> io_handler_;
   // Endpoint remote_side;
   // Endpoint local_side;
+
+  std::list<std::string> pending_output_; // TODO thread safe
 
   Dispatcher* dispatcher_;
 };
@@ -51,5 +54,3 @@ class ConnectionFactory {
 };
 
 }  // namespace pink
-
-#endif  // PINK_CONNECTION_H_

@@ -1,5 +1,4 @@
-#ifndef PINK_EVENTBASE_LOOP_H_
-#define PINK_EVENTBASE_LOOP_H_
+#pragma once
 
 #include <sys/epoll.h>
 
@@ -57,5 +56,3 @@ class EventbaseLoop : public Thread::Runnable {
 };
 
 }  // namespace pink
-
-#endif  // PINK_EVENTBASE_LOOP_H_
