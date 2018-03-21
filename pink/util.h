@@ -3,6 +3,8 @@
 #include <pthread.h>
 #include <string>
 
+#include "pink/endpoint.h"
+
 namespace pink {
 namespace util {
 
@@ -29,6 +31,22 @@ inline bool SetThreadName(pthread_t id, const std::string& name) {
   return false;
 }
 #endif
+
+bool AddrToEndPoint(const struct sockaddr_in* cliaddr, EndPoint* ep);
+bool IPPortToEndPoint(const std::string& ip, int port, EndPoint* ep);
+bool StrToEndPoint(const std::string& ip_port, EndPoint* ep);
+bool EndPointToStr(const EndPoint& ep, std::string* ip_port);
+
+bool StrToIP(const char* ip_str, ip_t* ip);
+bool StrToIP(const std::string& ip_str, ip_t* ip);
+
+bool IPToStr(ip_t ip, std::string* ip_str);
+
+bool HostnameToIP(const char* hostname, ip_t* ip);
+bool HostnameToIP(const std::string& hostname, ip_t* ip);
+
+bool HostnameToEndPoint(const char* hostname, int port, EndPoint* ep);
+bool HostnameToEndPoint(const std::string hostname, int port, EndPoint* ep);
 
 }  // namespace util
 }  // namespace pink

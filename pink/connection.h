@@ -3,44 +3,53 @@
 #include <memory>
 #include <list>
 
+#include "pink/options.h"
+#include "pink/endpoint.h"
+#include "pink/io_thread.h"
+
 namespace pink {
 
 class Dispatcher;
-class IOThread;
 
 class Connection {
  public:
   struct IOHandler;
 
   Connection();
-  virtual ~Connection() {}
-  bool InitConnection(int fd, std::shared_ptr<IOThread> io_thread,
-                      Dispatcher* dispacher);
+  virtual ~Connection() { Close(); }
 
-  int fd() { return fd_; }
+  void InitConn(int conn_fd, std::shared_ptr<IOThread> io_thread,
+                Dispatcher* dispacher, const EndPoint* remote_side,
+                const EndPoint* local_side);
 
-  bool Connect() { return true; } // For client
-
-  bool Write(const char* msg, size_t size);
+  int fd() const { return conn_fd_; }
 
   virtual void GetReadBuffer(void** buffer, size_t* len) = 0;
   virtual bool OnDataAvailable(size_t size) = 0;
+  bool Write(const void* data, size_t size);
+
+  bool Connect(const ClientOptions& opts,
+               const EndPoint* remote_side,
+               const EndPoint* local_side = nullptr);
+  bool BlockWrite(const void* data, size_t size);
+  bool BlockRead(void* data, size_t size, size_t* received);
 
   void Close();
 
  private:
   friend class Dispatcher;
 
+  EndPoint remote_side_;
+  EndPoint local_side_;
+
   void PerformRead();
   void PerformWrite();
 
-  ssize_t WriteImpl(const char* msg, size_t size);
+  ssize_t WriteImpl(const char* data, size_t size);
 
-  int fd_;
+  int conn_fd_;
   std::shared_ptr<IOThread> io_thread_;
   std::shared_ptr<IOHandler> io_handler_;
-  // Endpoint remote_side;
-  // Endpoint local_side;
 
   std::list<std::string> pending_output_; // TODO thread safe
 

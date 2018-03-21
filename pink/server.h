@@ -1,29 +1,26 @@
 #pragma once
 
 #include <string>
+#include <memory>
 
-#include "pink/connection.h"
+#include "pink/dispatcher.h"
+#include "pink/io_thread.h"
+#include "pink/options.h"
 
 namespace pink {
 
-class IOThread;
-class IOThreadPool;
-class Dispatcher;
-
-struct ServerOptions {
-  std::string listen_ip;
-  int port;
-  std::shared_ptr<ConnectionFactory> conn_factory;
-  std::shared_ptr<IOThread> accept_thread;
-  std::shared_ptr<IOThreadPool> worker_threads;
-};
-
 class Server {
  public:
-  bool Start(const ServerOptions& opts);
+  Server(const ServerOptions& opts)
+      : opts_(opts),
+        dispatcher_(opts) {
+  }
+
+  bool Start();
 
  private:
-  std::shared_ptr<Dispatcher> dispatcher_;
+  const ServerOptions opts_;
+  Dispatcher dispatcher_;
 };
 
 }  // namespace pink

@@ -1,22 +1,25 @@
 #include "pink/dispatcher.h"
 
+#include "pink/connection.h"
 #include "pink/util.h"
 #include "pink/xdebug.h"
 
 namespace pink {
 
 Dispatcher::Dispatcher(const ServerOptions& opts)
-      : ip_(opts.listen_ip),
-        port_(opts.port),
+      : server_ip_(opts.listen_ip),
+        server_port_(opts.port),
         accept_thread_(opts.accept_thread),
         worker_threads_(opts.worker_threads),
+        error_cb_(opts.error_callback),
+        close_cb_(opts.close_callback),
         ac_handler_(this),
         conn_factory_(opts.conn_factory) {
   connections_.reserve(10240);
 }
 
 bool Dispatcher::Bind() {
-  if (server_socket_.Bind(ip_, port_) < 0) {
+  if (server_socket_.Bind(server_ip_, server_port_) < 0) {
     return false;
   }
   if (server_socket_.Listen()) {
@@ -49,26 +52,40 @@ void Dispatcher::OnNewConnection() {
   if (ret != 0) {
     log_warn("SetNonblocking failed");
   }
+  ret = util::SetNoDelay(connfd);
+  if (ret != 0) {
+    log_warn("SetNoDelay failed");
+  }
 
   auto t = worker_threads_->NextThread();
 
   auto conn = conn_factory_->NewConnection();
-  if (!conn->InitConnection(connfd, t, this)) {
-    log_err("init connection failed, connfd: %d", connfd);
-  }
+  EndPoint remote_side, local_side;
+  util::IPPortToEndPoint(server_ip_, server_port_, &local_side);
+  util::AddrToEndPoint(&cliaddr, &remote_side);
+  conn->InitConn(connfd, t, this, &remote_side, &local_side);
 
+  std::lock_guard<std::mutex> lock(conn_mu_);
   connections_.insert(std::make_pair(connfd, conn));
 }
 
-void Dispatcher::OnConnClosed(Connection* conn) {
+void Dispatcher::OnConnClosed(const Connection* conn) {
   // TODO run in loop
   log_info("Connection: %d closed", conn->fd());
+  if (close_cb_) {
+    close_cb_(conn);
+  }
+  std::lock_guard<std::mutex> lock(conn_mu_);
   connections_.erase(conn->fd());
 }
 
-void Dispatcher::OnConnError(Connection* conn) {
-  connections_.erase(conn->fd());
+void Dispatcher::OnConnError(const Connection* conn) {
   log_info("Connection: %d error", conn->fd());
+  if (error_cb_) {
+    error_cb_(conn);
+  }
+  std::lock_guard<std::mutex> lock(conn_mu_);
+  connections_.erase(conn->fd());
 }
 
 }  // namespace pink

@@ -13,19 +13,7 @@ bool EventHandler::RegisterHandler(std::shared_ptr<EventbaseLoop> l, int fd) {
   event_loop_ = l;
   fd_ = fd;
 
-  return RegisterHandler();
-}
-
-bool EventHandler::RegisterHandler() {
-  event_.data.ptr = reinterpret_cast<void*>(this);
-  event_.events = EPOLLIN;
-
-  int ret = epoll_ctl(event_loop_->epfd(), EPOLL_CTL_ADD, fd_, &event_);
-  if (ret < 0) {
-    log_warn("Failed add fd: %d event to epfd_:%d", fd_, event_loop_->epfd());
-    return false;
-  }
-  return true;
+  return EnableRead();
 }
 
 bool EventHandler::UnRegisterHandler() {
@@ -38,9 +26,32 @@ bool EventHandler::UnRegisterHandler() {
   return true;
 }
 
+bool EventHandler::EnableRead() {
+  event_.data.ptr = reinterpret_cast<void*>(this);
+  event_.events = EPOLLIN;
+
+  int ret = epoll_ctl(event_loop_->epfd(), EPOLL_CTL_ADD, fd_, &event_);
+  if (ret < 0) {
+    log_warn("Failed add fd: %d event to epfd_:%d", fd_, event_loop_->epfd());
+    return false;
+  }
+  return true;
+}
+
 bool EventHandler::EnableWrite() {
   event_.data.ptr = reinterpret_cast<void*>(this);
   event_.events = EPOLLOUT | EPOLLIN;
+  int ret = epoll_ctl(event_loop_->epfd(), EPOLL_CTL_MOD, fd_, &event_);
+  if (ret < 0) {
+    log_warn("Failed add fd: %d event to epfd_:%d", fd_, event_loop_->epfd());
+    return false;
+  }
+  return true;
+}
+
+bool EventHandler::DisableWrite() {
+  event_.data.ptr = reinterpret_cast<void*>(this);
+  event_.events = EPOLLIN;
   int ret = epoll_ctl(event_loop_->epfd(), EPOLL_CTL_MOD, fd_, &event_);
   if (ret < 0) {
     log_warn("Failed add fd: %d event to epfd_:%d", fd_, event_loop_->epfd());

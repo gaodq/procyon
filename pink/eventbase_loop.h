@@ -23,12 +23,13 @@ class EventHandler {
   }
 
   bool RegisterHandler(std::shared_ptr<EventbaseLoop> l, int fd);
-  bool RegisterHandler();
   bool UnRegisterHandler();
 
   virtual void HandleReady(uint32_t events) = 0;
 
+  bool EnableRead();
   bool EnableWrite();
+  bool DisableWrite();
 
  private:
   std::shared_ptr<EventbaseLoop> event_loop_;

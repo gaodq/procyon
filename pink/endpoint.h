@@ -20,18 +20,4 @@ struct EndPoint {
   int port;
 };
 
-bool StrToEndPoint(const std::string& ip_port, EndPoint* ep);
-bool EndPointToStr(const EndPoint& ep, std::string* ip_port);
-
-bool StrToIP(const char* ip_str, ip_t* ip);
-bool StrToIP(const std::string& ip_str, ip_t* ip);
-
-bool IPToStr(ip_t ip, std::string* ip_str);
-
-bool HostnameToIP(const char* hostname, ip_t* ip);
-bool HostnameToIP(const std::string& hostname, ip_t* ip);
-
-bool HostnameToEndPoint(const char* hostname, int port, EndPoint* ep);
-bool HostnameToEndPoint(const std::string hostname, int port, EndPoint* ep);
-
 };  // namespace pink
