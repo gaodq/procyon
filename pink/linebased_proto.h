@@ -12,7 +12,9 @@ class LineMsgHandler {
  public:
   virtual ~LineMsgHandler() {}
 
-  virtual void HandleMessage(Connection* conn, const std::string& line) {}
+  virtual bool HandleNewLine(Connection* conn, const std::string& line) {
+    return true;
+  }
 
   void Write(Connection* conn, const std::string& msg) {
     conn->Write(msg.data(), msg.size());
@@ -26,9 +28,9 @@ class LineBasedConn : public Connection {
     buffer_.reserve(kDefaultBufferSize);
   }
 
-  bool OnDataAvailable(size_t size) override;
+  virtual bool OnDataAvailable(size_t size) override;
 
-  void GetReadBuffer(void** buffer, size_t* len) override;
+  virtual void GetReadBuffer(void** buffer, size_t* len) override;
 
  private:
   LineMsgHandler* handler_;

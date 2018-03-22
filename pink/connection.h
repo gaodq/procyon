@@ -13,6 +13,12 @@ class Dispatcher;
 
 class Connection {
  public:
+  enum State {
+    kNoConnect,
+    kConnecting,
+    kConnected,
+  };
+
   struct IOHandler;
 
   Connection();
@@ -26,18 +32,19 @@ class Connection {
 
   virtual void GetReadBuffer(void** buffer, size_t* len) = 0;
   virtual bool OnDataAvailable(size_t size) = 0;
-  bool Write(const void* data, size_t size);
+  bool Write(const void* data, size_t size, bool block = false);
 
   bool Connect(const ClientOptions& opts,
                const EndPoint* remote_side,
                const EndPoint* local_side = nullptr);
-  bool BlockWrite(const void* data, size_t size);
   bool BlockRead(void* data, size_t size, size_t* received);
 
   void Close();
 
  private:
   friend class Dispatcher;
+
+  State state_;
 
   EndPoint remote_side_;
   EndPoint local_side_;

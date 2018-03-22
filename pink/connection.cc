@@ -26,9 +26,11 @@ struct Connection::IOHandler : public EventHandler {
   void HandleReady(uint32_t events) override {
     if (events == kRead) {
       conn->PerformRead();
-    } else if (events == kWrite ||
-               events == kReadWrite) {
+    } else if (events == kWrite) {
       conn->PerformWrite();
+    } else if (events == kReadWrite) {
+      conn->PerformWrite();
+      conn->PerformRead();
     } else {
       conn->Close();
     }
@@ -38,7 +40,8 @@ struct Connection::IOHandler : public EventHandler {
 };
 
 Connection::Connection()
-    : io_handler_(new IOHandler(this)) {
+    : state_(kNoConnect),
+      io_handler_(new IOHandler(this)) {
 }
 
 void Connection::InitConn(int conn_fd, std::shared_ptr<IOThread> io_thread,
@@ -50,6 +53,7 @@ void Connection::InitConn(int conn_fd, std::shared_ptr<IOThread> io_thread,
   remote_side_ = *remote_side;
   local_side_ = *local_side;
   io_handler_->RegisterHandler(io_thread_->event_loop(), conn_fd_);
+  state_ = kConnected;
 }
 
 bool Connection::Connect(const ClientOptions& opts,
@@ -203,7 +207,6 @@ ssize_t Connection::WriteImpl(const char* data, size_t size) {
       sended += wn;
     } else if (wn == -1 && errno == EINTR) {
     } else if (wn == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-      io_handler_->EnableWrite();
       break;
     } else {
       return -1;
@@ -232,13 +235,14 @@ void Connection::PerformWrite() {
     }
   }
   if (pending_output_.empty()) {
+    io_handler_->DisableWrite();
   }
 }
 
-bool Connection::Write(const void* data, size_t size) {
+bool Connection::Write(const void* data, size_t size, bool block) {
   assert(io_handler_);
   const char* buf = reinterpret_cast<const char*>(data);
-  if (!pending_output_.empty()) {
+  if (!pending_output_.empty() && !block) {
     pending_output_.emplace_back(std::string(buf, size));
     io_handler_->EnableWrite();
   } else {
@@ -247,31 +251,15 @@ bool Connection::Write(const void* data, size_t size) {
     if (sended < 0) {
       return false;
     } else if (sended < static_cast<ssize_t>(size)) {
-      pending_output_.emplace_back(std::string(buf + sended, size - sended));
+      if (!block) {
+        pending_output_.emplace_back(std::string(buf + sended, size - sended));
+        io_handler_->EnableWrite();
+      } else {
+        return false;
+      }
     }
   }
 
-  return true;
-}
-
-bool Connection::BlockWrite(const void* data, size_t size) {
-  size_t sended = 0;
-  const char* buf = reinterpret_cast<const char*>(data);
-  while (sended < size) {
-    ssize_t wn = write(conn_fd_, buf + sended, size - sended);
-    if (wn > 0) {
-      sended += wn;
-    } else if (wn == -1 && errno == EINTR) {
-    } else if (wn == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-      // Timeout
-      log_err("send timeout: %s", strerror(errno));
-      return false;
-    } else {
-      // IOError
-      log_err("IOError: %s", strerror(errno));
-      return false;
-    }
-  }
   return true;
 }
 
@@ -306,6 +294,10 @@ bool Connection::BlockRead(void* data, size_t buf_size, size_t* received) {
 
 void Connection::Close(/* CLOSEREASON reason */) {
   // Connection closed by peer
+  if (state_ != kConnected) {
+    return;
+  }
+  state_ = kNoConnect;
   dispatcher_->OnConnClosed(this);
 }
 

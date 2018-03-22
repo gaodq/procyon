@@ -84,8 +84,6 @@ void Dispatcher::OnConnError(const Connection* conn) {
   if (error_cb_) {
     error_cb_(conn);
   }
-  std::lock_guard<std::mutex> lock(conn_mu_);
-  connections_.erase(conn->fd());
 }
 
 }  // namespace pink

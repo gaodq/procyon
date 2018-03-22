@@ -23,7 +23,6 @@ class EventHandler {
   }
 
   bool RegisterHandler(std::shared_ptr<EventbaseLoop> l, int fd);
-  bool UnRegisterHandler();
 
   virtual void HandleReady(uint32_t events) = 0;
 
@@ -32,6 +31,8 @@ class EventHandler {
   bool DisableWrite();
 
  private:
+  bool UnRegisterHandler();
+
   std::shared_ptr<EventbaseLoop> event_loop_;
   int fd_;
   struct epoll_event event_;
