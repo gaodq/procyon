@@ -4,3 +4,5 @@ tags
 **.o
 output
 pink/build_version.cc
+test/bg_thread_test
+test/gmock_main.a

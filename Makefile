@@ -121,9 +121,9 @@ all: $(LIBRARY)
 # example:
 # 	@make -C examples PINK_PATH=$(CURDIR)/.. DEBUG_LEVEL=$(DEBUG_LEVEL)
 # 
-# check: $(LIBRARY)
-# 	@make -C test PINK_PATH=$(CURDIR)/.. SLASH_PATH=$(SLASH_PATH)
-# 	for t in $(notdir $(TESTS)); do echo "***** Running $$t"; ./test/$$t || exit 1; done
+check: $(LIBRARY)
+	$(AM_V_at)make -C test PINK_PATH=$(CURDIR)/.. SLASH_PATH=$(SLASH_PATH)
+	$(AM_V_at)for t in $(notdir $(TESTS)); do echo "***** Running $$t"; ./test/$$t || exit 1; done
 
 dbg: $(LIBRARY)
 	$(AM_V_at)mkdir -p $(OUTPUT)/include/pink

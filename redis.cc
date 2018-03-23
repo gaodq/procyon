@@ -17,6 +17,7 @@ class CustomHandler : public pink::RedisMsgHandler {
                               const std::string& command,
                               const std::vector<std::string>& args) override {
 
+    usleep(500);
     Write(conn, "+OK\r\n");
 
     return true;
