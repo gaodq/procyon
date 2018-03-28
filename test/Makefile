@@ -41,6 +41,7 @@ CXXFLAGS += -g -Wall -Wextra -pthread -std=c++11
 # created to the list.
 TESTS = \
 				bg_thread_test \
+				iobuf_test \
 
 # All Google Test headers.  Usually you shouldn't change this
 # definition.
@@ -101,4 +102,7 @@ gmock_main.a : gmock-all.o gtest-all.o gmock_main.o
 # Builds pink tests.
 
 bg_thread_test: $(PINK_TESTS_SRC)/bg_thread_test.cc gmock_main.a
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(EXTRA_CXXFLAGS) $^ $(LDFLAGS) -o $@
+
+iobuf_test: $(PINK_TESTS_SRC)/iobuf_test.cc gmock_main.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(EXTRA_CXXFLAGS) $^ $(LDFLAGS) -o $@

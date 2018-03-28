@@ -6,15 +6,13 @@
 
 namespace pink {
 
-const size_t kDefaultBufferSize = 16 * 1024;  // 16KB
+const size_t kDefaultBufferSize = 16 * 1024;
 
 class LineMsgHandler {
  public:
   virtual ~LineMsgHandler() {}
 
-  virtual bool HandleNewLine(Connection* conn, const std::string& line) {
-    return true;
-  }
+  virtual void HandleNewLine(Connection* conn, const std::string& line) {}
 
   void Write(Connection* conn, const std::string& msg) {
     conn->Write(msg.data(), msg.size());
@@ -28,7 +26,7 @@ class LineBasedConn : public Connection {
     buffer_.reserve(kDefaultBufferSize);
   }
 
-  virtual bool OnDataAvailable(size_t size) override;
+  virtual void OnDataAvailable(size_t size) override;
 
   virtual void GetReadBuffer(void** buffer, size_t* len) override;
 

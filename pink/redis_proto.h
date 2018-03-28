@@ -15,12 +15,10 @@ class RedisMsgHandler : public LineMsgHandler {
   }
   virtual ~RedisMsgHandler() {}
 
-  bool HandleNewLine(Connection* conn, const std::string& line) override;
+  void HandleNewLine(Connection* conn, const std::string& line) override;
 
-  virtual bool HandleRedisMsg(Connection* conn, const std::string& command,
-                              const std::vector<std::string>& args) {
-    return true;
-  }
+  virtual void HandleRedisMsg(Connection* conn, const std::string& command,
+                              const std::vector<std::string>& args) {}
 
   void Write(Connection* conn, const std::string& msg) {
     conn->Write(msg.data(), msg.size());

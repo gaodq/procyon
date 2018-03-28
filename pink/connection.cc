@@ -41,6 +41,7 @@ struct Connection::IOHandler : public EventHandler {
 
 Connection::Connection()
     : state_(kNoConnect),
+      last_active_time_(util::NowMicros()),
       io_handler_(new IOHandler(this)) {
 }
 
@@ -52,7 +53,7 @@ void Connection::InitConn(int conn_fd, std::shared_ptr<IOThread> io_thread,
   dispatcher_ = dispacher;
   remote_side_ = *remote_side;
   local_side_ = *local_side;
-  io_handler_->RegisterHandler(io_thread_->event_loop(), conn_fd_);
+  io_handler_->RegisterHandler(event_loop(), conn_fd_);
   state_ = kConnected;
 }
 
@@ -161,6 +162,7 @@ bool Connection::Connect(const ClientOptions& opts,
 
     // connect ok
     remote_side_ = *remote_side;
+    last_active_time_ = util::NowMicros();
     return true;
   }
   if (p == nullptr) {
@@ -173,6 +175,7 @@ bool Connection::Connect(const ClientOptions& opts,
 }
 
 void Connection::PerformRead() {
+  last_active_time_ = util::NowMicros();
   while (true) {
     void* buffer;
     size_t len;
@@ -185,11 +188,7 @@ void Connection::PerformRead() {
       dispatcher_->OnConnError(this);
       break;
     } else if (rn > 0) {
-      bool r = OnDataAvailable(rn);
-      if (!r) {
-        dispatcher_->OnConnError(this);
-        break;
-      }
+      OnDataAvailable(rn);
     } else {
       // EOF
       break;
@@ -217,11 +216,14 @@ ssize_t Connection::WriteImpl(const char* data, size_t size) {
 
 void Connection::PerformWrite() {
   assert(!pending_output_.empty());
+  last_active_time_ = util::NowMicros();
   while (!pending_output_.empty()) {
     const std::string& buf = pending_output_.front();
     ssize_t sended = WriteImpl(buf.data(), buf.size());
     if (sended < 0) {
       // Error
+      Close();
+      return;
     } else {
       std::string remain;
       if (sended < static_cast<ssize_t>(buf.size())) {
@@ -241,6 +243,7 @@ void Connection::PerformWrite() {
 
 bool Connection::Write(const void* data, size_t size, bool block) {
   assert(io_handler_);
+  last_active_time_ = util::NowMicros();
   const char* buf = reinterpret_cast<const char*>(data);
   if (!pending_output_.empty() && !block) {
     pending_output_.emplace_back(std::string(buf, size));
@@ -292,13 +295,18 @@ bool Connection::BlockRead(void* data, size_t buf_size, size_t* received) {
   return true;
 }
 
+int Connection::IdleSeconds() {
+  return (util::NowMicros() - last_active_time_) / 1000000;
+}
+
 void Connection::Close(/* CLOSEREASON reason */) {
-  // Connection closed by peer
-  if (state_ != kConnected) {
-    return;
-  }
-  state_ = kNoConnect;
-  dispatcher_->OnConnClosed(this);
+  event_loop()->RunInLoop([this](){
+    if (state_ != kConnected) {
+      return;
+    }
+    state_ = kNoConnect;
+    dispatcher_->OnConnClosed(this);
+  });
 }
 
 }  // namespace pink

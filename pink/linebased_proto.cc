@@ -2,7 +2,7 @@
 
 namespace pink {
 
-bool LineBasedConn::OnDataAvailable(size_t size) {
+void LineBasedConn::OnDataAvailable(size_t size) {
   size_t i = 0;
   size_t last_line = 0;
   while (true) {
@@ -16,9 +16,7 @@ bool LineBasedConn::OnDataAvailable(size_t size) {
     }
 
     std::string new_line(buffer_.data() + last_line, i - last_line);
-    if (!handler_->HandleNewLine(this, new_line)) {
-      return false;
-    }
+    handler_->HandleNewLine(this, new_line);
 
     i += 2;
     last_line = i;
@@ -30,8 +28,6 @@ bool LineBasedConn::OnDataAvailable(size_t size) {
     remain.reserve(kDefaultBufferSize);
     buffer_.swap(remain);
   }
-  
-  return true;
 }
 
 void LineBasedConn::GetReadBuffer(void** buffer, size_t* len) {

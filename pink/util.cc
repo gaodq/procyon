@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <netinet/tcp.h>
 #include <strings.h>
@@ -14,6 +15,12 @@
 
 namespace pink {
 namespace util {
+
+uint64_t NowMicros() {
+  struct timeval tv;
+  gettimeofday(&tv, nullptr);
+  return static_cast<uint64_t>(tv.tv_sec) * 1000000 + tv.tv_usec;
+}
 
 int SetReuseAddr(int fd) {
   int yes = 1;

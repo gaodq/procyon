@@ -33,21 +33,13 @@ class Dispatcher {
   };
 
  private:
-  const std::string server_ip_;
-  const int server_port_;
-
-  std::shared_ptr<IOThread> accept_thread_;
-  std::shared_ptr<IOThreadPool> worker_threads_;
-
-  std::function<void(const Connection*)> error_cb_;
-  std::function<void(const Connection*)> close_cb_;
+  const ServerOptions opts_;
 
   ServerSocket server_socket_;
   std::unordered_map<int, std::shared_ptr<Connection>> connections_;
   std::mutex conn_mu_;
 
   AcceptHandler ac_handler_;
-  std::shared_ptr<ConnectionFactory> conn_factory_;
 };
 
 }  // namespace pink

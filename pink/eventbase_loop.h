@@ -1,6 +1,8 @@
 #pragma once
 
 #include <sys/epoll.h>
+#include <mutex>
+#include <vector>
 
 #include "pink/thread.h"
 
@@ -46,7 +48,8 @@ class EventbaseLoop : public Thread::Runnable {
   // Runnable
   void run() override;
 
-  void RunInLoop(std::function<void()> fn);
+  // TODO Timer
+  void RunInLoop(std::function<void()> fn, bool once = true);
 
   void Stop() { should_stop_ = true; }
 
@@ -55,6 +58,9 @@ class EventbaseLoop : public Thread::Runnable {
  private:
   int epfd_;
   volatile bool should_stop_;
+
+  std::mutex callbacks_mu_;
+  std::vector<std::pair<std::function<void()>, bool>> callbacks_;
 };
 
 }  // namespace pink

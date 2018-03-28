@@ -75,22 +75,52 @@ EventbaseLoop::~EventbaseLoop() {
   close(epfd_);
 }
 
-static const int kPinkMaxClients = 10240;
-static const int kPinkEpollTimeout = 1000;
+const int kPinkMaxClients = 10240;
+const int kPinkEpollTimeout = 1000;
 
 void EventbaseLoop::run() {
   struct epoll_event e[kPinkMaxClients];
   while (!should_stop_) {
+    std::vector<std::pair<std::function<void()>, bool>> cbs, next_cbs;
+    {
+    std::lock_guard<std::mutex> l(callbacks_mu_);
+    callbacks_.swap(cbs);
+    }
+    for (auto item : cbs) {
+      auto fn = item.first;
+      bool once = item.second;
+      if (!once) {
+        next_cbs.push_back(item);
+      }
+      fn();
+    }
+    {
+    std::lock_guard<std::mutex> l(callbacks_mu_);
+    callbacks_.insert(callbacks_.end(), next_cbs.begin(), next_cbs.end());
+    }
+
     int n = epoll_wait(epfd_, e, kPinkMaxClients, kPinkEpollTimeout);
     if (should_stop_) {
       break;
     }
+
     for (int i = 0; i < n; i++) {
       EventHandler* handler = reinterpret_cast<EventHandler*>(e[i].data.ptr);
       handler->HandleReady(e[i].events);
     }
     // n little than zero, continue
   }
+}
+
+void EventbaseLoop::RunInLoop(std::function<void()> fn, bool once) {
+  if (thread()->thread_id() == pthread_self()) {
+    fn();
+    if (once) {
+      return;
+    }
+  }
+  std::lock_guard<std::mutex> l(callbacks_mu_);
+  callbacks_.push_back(std::make_pair(fn, once));
 }
 
 }  // namespace pink

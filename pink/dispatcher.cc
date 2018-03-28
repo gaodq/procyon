@@ -7,28 +7,32 @@
 namespace pink {
 
 Dispatcher::Dispatcher(const ServerOptions& opts)
-      : server_ip_(opts.listen_ip),
-        server_port_(opts.port),
-        accept_thread_(opts.accept_thread),
-        worker_threads_(opts.worker_threads),
-        error_cb_(opts.error_callback),
-        close_cb_(opts.close_callback),
-        ac_handler_(this),
-        conn_factory_(opts.conn_factory) {
+      : opts_(opts),
+        ac_handler_(this) {
   connections_.reserve(10240);
 }
 
 bool Dispatcher::Bind() {
-  if (server_socket_.Bind(server_ip_, server_port_) < 0) {
+  if (server_socket_.Bind(opts_.listen_ip, opts_.port) < 0) {
     return false;
   }
   if (server_socket_.Listen()) {
     return false;
   }
-  if (!ac_handler_.RegisterHandler(accept_thread_->event_loop(),
+  if (!ac_handler_.RegisterHandler(opts_.accept_thread->event_loop(),
                                    server_socket_.fd())) {
     return false;
   }
+
+  opts_.accept_thread->event_loop()->RunInLoop([this](){
+    std::lock_guard<std::mutex> l(conn_mu_);
+    for (auto& item : connections_) {
+      auto& conn = item.second;
+      if (conn->IdleSeconds() > opts_.connection_idle_timeout_s) {
+        conn->Close();
+      }
+    }
+  }, false);
 
   return true;
 }
@@ -57,11 +61,11 @@ void Dispatcher::OnNewConnection() {
     log_warn("SetNoDelay failed");
   }
 
-  auto t = worker_threads_->NextThread();
+  auto t = opts_.worker_threads->NextThread();
 
-  auto conn = conn_factory_->NewConnection();
+  auto conn = opts_.conn_factory->NewConnection();
   EndPoint remote_side, local_side;
-  util::IPPortToEndPoint(server_ip_, server_port_, &local_side);
+  util::IPPortToEndPoint(opts_.listen_ip, opts_.port, &local_side);
   util::AddrToEndPoint(&cliaddr, &remote_side);
   conn->InitConn(connfd, t, this, &remote_side, &local_side);
 
@@ -72,8 +76,8 @@ void Dispatcher::OnNewConnection() {
 void Dispatcher::OnConnClosed(const Connection* conn) {
   // TODO run in loop
   log_info("Connection: %d closed", conn->fd());
-  if (close_cb_) {
-    close_cb_(conn);
+  if (opts_.close_callback) {
+    opts_.close_callback(conn);
   }
   std::lock_guard<std::mutex> lock(conn_mu_);
   connections_.erase(conn->fd());
@@ -81,8 +85,8 @@ void Dispatcher::OnConnClosed(const Connection* conn) {
 
 void Dispatcher::OnConnError(const Connection* conn) {
   log_info("Connection: %d error", conn->fd());
-  if (error_cb_) {
-    error_cb_(conn);
+  if (opts_.error_callback) {
+    opts_.error_callback(conn);
   }
 }
 

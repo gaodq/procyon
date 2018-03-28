@@ -12,6 +12,12 @@ class Thread {
    public:
     virtual ~Runnable() {}
     virtual void run() = 0;
+
+    Thread* thread() { return thread_; }
+    void SetThread(Thread* t) { thread_ = t; }
+
+   private:
+    Thread* thread_;
   };
 
   Thread(std::shared_ptr<Runnable> runnable, bool detached = false);

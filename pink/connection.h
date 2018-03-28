@@ -30,14 +30,20 @@ class Connection {
 
   int fd() const { return conn_fd_; }
 
+  std::shared_ptr<EventbaseLoop> event_loop() {
+    return io_thread_->event_loop();
+  }
+
   virtual void GetReadBuffer(void** buffer, size_t* len) = 0;
-  virtual bool OnDataAvailable(size_t size) = 0;
+  virtual void OnDataAvailable(size_t size) = 0;
   bool Write(const void* data, size_t size, bool block = false);
 
   bool Connect(const ClientOptions& opts,
                const EndPoint* remote_side,
                const EndPoint* local_side = nullptr);
   bool BlockRead(void* data, size_t size, size_t* received);
+
+  int IdleSeconds();
 
   void Close();
 
@@ -55,6 +61,7 @@ class Connection {
   ssize_t WriteImpl(const char* data, size_t size);
 
   int conn_fd_;
+  uint64_t last_active_time_;
   std::shared_ptr<IOThread> io_thread_;
   std::shared_ptr<IOHandler> io_handler_;
 

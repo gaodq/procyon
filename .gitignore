@@ -1,8 +1,12 @@
-tags
 *.out
 **.d
 **.o
+
 output
+tags
+
 pink/build_version.cc
+
 test/bg_thread_test
+test/iobuf_test
 test/gmock_main.a

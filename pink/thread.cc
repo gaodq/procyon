@@ -10,6 +10,7 @@ Thread::Thread(std::shared_ptr<Runnable> runnable, bool detached)
       detached_(detached),
       runnable_(runnable),
       thread_id_(0) {
+  runnable_->SetThread(this);
 }
 
 void* Thread::ThreadMain(void *arg) {

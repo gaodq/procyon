@@ -4,14 +4,13 @@
 
 namespace pink {
 
-bool RedisMsgHandler::HandleNewLine(Connection* conn, const std::string& line) {
-  bool res = true;
+void RedisMsgHandler::HandleNewLine(Connection* conn, const std::string& line) {
   if (multibulk_len_ == -1) {
     multibulk_len_ = std::atoi(line.data() + 1);
-    return res;
+    return;
   } else if (bulk_len_ == -1) {
     bulk_len_ = std::atoi(line.data() + 1);
-    return res;
+    return;
   } else {
     if (command_.empty()) {
       command_.assign(line);
@@ -23,12 +22,11 @@ bool RedisMsgHandler::HandleNewLine(Connection* conn, const std::string& line) {
   }
   if (multibulk_len_ == 0) {
 
-    res = HandleRedisMsg(conn, command_, args_);
+    HandleRedisMsg(conn, command_, args_);
     command_.clear();
     args_.clear();
     multibulk_len_ = -1;
   }
-  return res;;
 }
 
 }  // namespace pink

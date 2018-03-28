@@ -1,7 +1,9 @@
 #include "pink/server.h"
+#include "pink/options.h"
 #include "pink/connection.h"
-#include "pink/linebased_conn.h"
+#include "pink/redis_proto.h"
 #include "pink/io_thread.h"
+#include "pink/bg_thread.h"
 
 #include <unistd.h>
 #include <iostream>
@@ -10,13 +12,34 @@
 #include <thread>
 #include <chrono>
 
-std::atomic<int> rpc_num(0);
+pink::BGThread worker_threads(5);
 
-class CustomHandler : public pink::LineMsgHandler {
+class CustomHandler : public pink::RedisMsgHandler {
  public:
-  void HandleMessage(pink::Connection* conn, const std::string& msg) override {
-    std::cout << "receive: " << msg << std::endl;
-    Write(conn, msg + "\r\n");
+  struct RedisArgs {
+    pink::Connection* conn;
+  };
+
+  static void HandleDBRequest(void* arg) {
+    usleep(5000);
+    RedisArgs* redis_args = reinterpret_cast<RedisArgs*>(arg);
+    redis_args->conn->Write("+OK\r\n", 5);
+    delete redis_args;
+  }
+
+  virtual void HandleRedisMsg(pink::Connection* conn, const std::string& command,
+                              const std::vector<std::string>& args) override {
+    if (!args.empty()) {
+      const std::string& key = args[0];
+
+      if (key < "key:000000000010") {
+        RedisArgs* redis_args = new RedisArgs;
+        redis_args->conn = conn;
+        worker_threads.Schedule(HandleDBRequest, redis_args);
+      }
+    } else {
+      Write(conn, "+OK\r\n");
+    }
   }
 };
 
@@ -28,14 +51,15 @@ class MyConnFactory : public pink::ConnectionFactory {
 };
 
 int main() {
-  pink::Server server;
   pink::ServerOptions opts;
-  opts.listen_ip = "0.0.0.0";
-  opts.port = 8089;
+  opts.port = 6379;
   opts.conn_factory = std::make_shared<MyConnFactory>();
-  opts.accept_thread = std::make_shared<pink::IOThread>();
-  opts.worker_threads = std::make_shared<pink::IOThreadPool>(4);
-  bool res = server.Start(opts);
+  opts.worker_threads = std::make_shared<pink::IOThreadPool>(5);
+
+  worker_threads.Start();
+
+  pink::Server server(opts);
+  bool res = server.Start();
   if (!res) {
     std::cout << "Error" << std::endl;
   }

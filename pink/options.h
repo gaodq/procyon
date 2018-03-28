@@ -21,11 +21,13 @@ struct ServerOptions {
     std::shared_ptr<IOThread>(new IOThread);
 
   std::shared_ptr<IOThreadPool> worker_threads =
-    std::shared_ptr<IOThreadPool>(new IOThreadPool(4));
+    std::shared_ptr<IOThreadPool>(new IOThreadPool(1));
 
   std::function<void(const Connection*)> error_callback;
 
   std::function<void(const Connection*)> close_callback;
+
+  int connection_idle_timeout_s = 180; // 3 minutes
 };
 
 struct ClientOptions {

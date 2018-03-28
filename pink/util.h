@@ -8,6 +8,8 @@
 namespace pink {
 namespace util {
 
+uint64_t NowMicros();
+
 int SetReuseAddr(int fd);
 int SetNonblocking(int fd);
 int SetFdCloseExec(int fd);
