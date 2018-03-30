@@ -12,7 +12,7 @@
 #include <thread>
 #include <chrono>
 
-pink::BGThread worker_threads(5);
+pink::BGThread worker_threads(4);
 
 class CustomHandler : public pink::RedisMsgHandler {
  public:
@@ -27,19 +27,21 @@ class CustomHandler : public pink::RedisMsgHandler {
     delete redis_args;
   }
 
-  virtual void HandleRedisMsg(pink::Connection* conn, const std::string& command,
-                              const std::vector<std::string>& args) override {
-    if (!args.empty()) {
-      const std::string& key = args[0];
+  virtual void HandleRedisMsg(
+      pink::Connection* conn,
+      const std::vector<std::unique_ptr<pink::IOBuf>>& args) override {
+    if (args.size() > 1) {
+      const std::string& key = args[1]->ToString();
 
-      if (key < "key:000000000010") {
-        RedisArgs* redis_args = new RedisArgs;
-        redis_args->conn = conn;
-        worker_threads.Schedule(HandleDBRequest, redis_args);
-      }
-    } else {
-      Write(conn, "+OK\r\n");
+      // if (key < "key:000000000010") {
+      //   RedisArgs* redis_args = new RedisArgs;
+      //   redis_args->conn = conn;
+      //   worker_threads.Schedule(HandleDBRequest, redis_args);
+      //   return;
+      // }
     }
+
+    Write(conn, "+OK\r\n");
   }
 };
 
@@ -54,7 +56,7 @@ int main() {
   pink::ServerOptions opts;
   opts.port = 6379;
   opts.conn_factory = std::make_shared<MyConnFactory>();
-  opts.worker_threads = std::make_shared<pink::IOThreadPool>(5);
+  opts.worker_threads = std::make_shared<pink::IOThreadPool>(20);
 
   worker_threads.Start();
 

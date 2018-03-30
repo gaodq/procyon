@@ -95,6 +95,25 @@ std::pair<void*, size_t> IOBuf::PreAllocate(size_t size) {
 void IOBuf::PostAllocate(size_t size) {
   assert(head_);
   head_->prev_->Append(size);
+  length_ += size;
+}
+
+char IOBuf::ByteAt(size_t pos) {
+  assert(pos < length_);
+  char res = -1;
+  Block* b = head_.get();
+  while (b) {
+    if (pos < b->length_) {
+      res = *(b->data_ + pos);
+      break;
+    }
+    pos -= b->length_;
+    b = b->next_;
+    if (b == head_.get()) {
+      break;
+    }
+  }
+  return res;
 }
 
 void IOBuf::Append(std::unique_ptr<Block>&& block) {
@@ -114,14 +133,14 @@ void IOBuf::Append(std::unique_ptr<Block>&& block) {
 }
 
 void IOBuf::Append(const char* data, size_t size) {
-  int remain = size;
+  size_t remain = size;
   while (remain) {
     auto mem = PreAllocate(remain);
-    memcpy(mem.first, data, mem.second);
-    remain -= mem.second;
-    PostAllocate(mem.second);
+    size_t copy_size = std::min(mem.second, size);
+    memcpy(mem.first, data, copy_size);
+    remain -= copy_size;
+    PostAllocate(copy_size);
   }
-  length_ += size;
 }
 
 std::unique_ptr<Block> IOBuf::Pop() {
@@ -152,12 +171,11 @@ void IOBuf::TrimStart(size_t amount) {
     }
     if (head_->length_ > amount) {
       head_->TrimStart(amount);
-      amount = 0;
       length_ -= amount;
+      amount = 0;
       break;
     }
     amount -= head_->length_;
-    length_ -= head_->length_;
     Pop();
   }
 }
@@ -195,7 +213,6 @@ std::unique_ptr<IOBuf> IOBuf::Split(size_t n) {
       break;
     } else if (head_->length_ <= n) {
       n -= head_->length_;
-      length_ -= head_->length_;
       buf->Append(std::move(Pop()));
     } else {
       std::unique_ptr<Block> b = head_->Clone();

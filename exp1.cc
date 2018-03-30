@@ -14,7 +14,7 @@ std::atomic<int> rpc_num(0);
 
 class CustomHandler : public pink::LineMsgHandler {
  public:
-  void HandleMessage(pink::Connection* conn, const std::string& msg) override {
+  void HandleMessage(pink::Connection* conn, std::unique_ptr<pink::IOBuf>&& msg) override {
     // std::cout << "receive: " << msg << std::endl;
     rpc_num.fetch_add(1, std::memory_order_relaxed);
     Write(conn, msg + "\r\n");

@@ -3,39 +3,24 @@
 namespace pink {
 
 void LineBasedConn::OnDataAvailable(size_t size) {
-  size_t i = 0;
-  size_t last_line = 0;
-  while (true) {
-    for (; i < size; i++) {
-      if (buffer_[i] == '\r') {
-        break;
-      }
+  buffer_.PostAllocate(size);
+  size_t pos = 0;
+  while (pos < buffer_.length()) {
+    if (buffer_.ByteAt(pos) == '\r') {
+      std::unique_ptr<IOBuf> new_line = buffer_.Split(pos);
+      handler_->HandleNewLine(this, std::move(new_line));
+      buffer_.TrimStart(2);  // Trim \r\n
+      pos = 0;
+    } else {
+      pos++;
     }
-    if (i == size) {
-      break;
-    }
-
-    std::string new_line(buffer_.data() + last_line, i - last_line);
-    handler_->HandleNewLine(this, new_line);
-
-    i += 2;
-    last_line = i;
-  }
-
-  if (buffer_.size() > last_line + 1) {
-    std::string remain(buffer_.data() + last_line + 2,
-                       buffer_.size() - last_line - 2);
-    remain.reserve(kDefaultBufferSize);
-    buffer_.swap(remain);
   }
 }
 
 void LineBasedConn::GetReadBuffer(void** buffer, size_t* len) {
-  if (buffer_.capacity() == buffer_.size()) {
-    buffer_.reserve(buffer_.size() * 2);
-  }
-  *len = buffer_.capacity() - buffer_.size();
-  *buffer = const_cast<char*>(buffer_.data() + buffer_.size());
+  auto mem = buffer_.PreAllocate(kDefaultBufferSize);
+  *buffer = mem.first;
+  *len = mem.second;
 }
 
 }  // namespace pink

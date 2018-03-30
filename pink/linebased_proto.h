@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "pink/connection.h"
+#include "pink/iobuf.h"
 
 namespace pink {
 
@@ -12,7 +13,7 @@ class LineMsgHandler {
  public:
   virtual ~LineMsgHandler() {}
 
-  virtual void HandleNewLine(Connection* conn, const std::string& line) {}
+  virtual void HandleNewLine(Connection* conn, std::unique_ptr<IOBuf>&& line) {}
 
   void Write(Connection* conn, const std::string& msg) {
     conn->Write(msg.data(), msg.size());
@@ -23,7 +24,6 @@ class LineBasedConn : public Connection {
  public:
   explicit LineBasedConn(LineMsgHandler* handler)
       : handler_(handler) {
-    buffer_.reserve(kDefaultBufferSize);
   }
 
   virtual void OnDataAvailable(size_t size) override;
@@ -33,7 +33,7 @@ class LineBasedConn : public Connection {
  private:
   LineMsgHandler* handler_;
 
-  std::string buffer_;
+  IOBuf buffer_;
 };
 
 }  // namespace pink

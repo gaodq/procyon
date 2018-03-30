@@ -66,6 +66,8 @@ class IOBuf {
 
   size_t length() { return length_; }
 
+  char ByteAt(size_t pos);
+
   void Append(std::unique_ptr<Block>&& block);
   void Append(const char* data, size_t size);
   std::unique_ptr<Block> Pop();

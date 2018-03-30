@@ -18,6 +18,10 @@ TEST(IOBufTest, SingleBlock) {
   memcpy(mem.first, test_str, strlen(test_str));
   buf->PostAllocate(strlen(test_str));
 
+  ASSERT_EQ(buf->ByteAt(0), 't');
+  ASSERT_EQ(buf->ByteAt(8), 't');
+  ASSERT_EQ(buf->ByteAt(9), 'e');
+
   ASSERT_EQ(buf->TEST_BlockCount(), 1);
   ASSERT_EQ(buf->ToString(), std::string(test_str));
 
@@ -29,6 +33,19 @@ TEST(IOBufTest, SingleBlock) {
 
   clone.reset();
   ASSERT_EQ(pop->TEST_Refcount(), 1);
+}
+
+TEST(IOBufTest, Buflen) {
+  pink::IOBuf buf;
+  std::string cmd("*1\r\n$7\r\nCOMMAND\r\n");
+  buf.Append(cmd.data(), cmd.size());
+  ASSERT_EQ(buf.length(), cmd.size());
+  buf.Split(2);
+  ASSERT_EQ(buf.length(), cmd.size() - 2);
+  buf.TrimStart(2);
+  ASSERT_EQ(buf.length(), cmd.size() - 4);
+  buf.TrimEnd(2);
+  ASSERT_EQ(buf.length(), cmd.size() - 6);
 }
 
 TEST(IOBufTest, MultiBlocks) {
