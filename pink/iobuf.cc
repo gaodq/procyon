@@ -80,7 +80,7 @@ std::pair<void*, size_t> IOBuf::PreAllocate(size_t size) {
     res.first = head_->buffer_;
     res.second = head_->capacity_;
   } else if (head_->prev_->Space() > 0) {
-    res.first = head_->End();
+    res.first = head_->tail();
     res.second = head_->Space();
   } else {
     std::unique_ptr<Block> nb(new Block(alloc_size));
@@ -114,6 +114,20 @@ char IOBuf::ByteAt(size_t pos) {
     }
   }
   return res;
+}
+
+const char* IOBuf::data() {
+  if (!head_) {
+    return nullptr;
+  }
+  return head_->prev_->data();
+}
+
+const char* IOBuf::tail() {
+  if (!head_) {
+    return nullptr;
+  }
+  return head_->prev_->tail();
 }
 
 void IOBuf::Append(std::unique_ptr<Block>&& block) {

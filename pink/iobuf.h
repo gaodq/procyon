@@ -30,7 +30,8 @@ class Block {
 
   size_t Space() { return capacity_ - length_; }
 
-  char* End() { return buffer_ + length_; }
+  const char* data() { return data_; }
+  char* tail() { return buffer_ + length_; }
 
   std::string ToString() { return std::string(data_, length_); }
 
@@ -67,6 +68,9 @@ class IOBuf {
   size_t length() { return length_; }
 
   char ByteAt(size_t pos);
+
+  const char* data();
+  const char* tail();
 
   void Append(std::unique_ptr<Block>&& block);
   void Append(const char* data, size_t size);
