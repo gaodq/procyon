@@ -18,7 +18,7 @@ void LineBasedConn::OnDataAvailable(size_t size) {
 }
 
 void LineBasedConn::GetReadBuffer(void** buffer, size_t* len) {
-  auto mem = buffer_.PreAllocate(kDefaultBufferSize);
+  auto mem = buffer_.PreAllocate();
   *buffer = mem.first;
   *len = mem.second;
 }

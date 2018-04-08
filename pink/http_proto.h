@@ -10,8 +10,6 @@
 
 namespace pink {
 
-const size_t kDefaultBufferSize = 1024 * 1024;  // 1MB
-
 const int kHTTPDelete = HTTP_DELETE;
 const int kHTTPGet = HTTP_GET;
 const int kHTTPHead = HTTP_HEAD;

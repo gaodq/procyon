@@ -109,7 +109,7 @@ void HTTPConn::OnDataAvailable(size_t size) {
 }
 
 void HTTPConn::GetReadBuffer(void** buffer, size_t* len) {
-  auto mem = buffer_.PreAllocate(kDefaultBufferSize);
+  auto mem = buffer_.PreAllocate();
   *buffer = mem.first;
   *len = mem.second;
 }

@@ -14,6 +14,8 @@
 
 pink::BGThread worker_threads(4);
 
+volatile uint64_t g_req_num = 0;
+
 class CustomHandler : public pink::RedisMsgHandler {
  public:
   struct RedisArgs {
@@ -30,6 +32,7 @@ class CustomHandler : public pink::RedisMsgHandler {
   virtual void HandleRedisMsg(
       pink::Connection* conn,
       const std::vector<std::unique_ptr<pink::IOBuf>>& args) override {
+    g_req_num++;
     if (args.size() > 1) {
       const std::string& key = args[1]->ToString();
 
@@ -56,7 +59,7 @@ int main() {
   pink::ServerOptions opts;
   opts.port = 6379;
   opts.conn_factory = std::make_shared<MyConnFactory>();
-  opts.worker_threads = std::make_shared<pink::IOThreadPool>(20);
+  opts.worker_threads = std::make_shared<pink::IOThreadPool>(24);
 
   worker_threads.Start();
 
@@ -67,7 +70,13 @@ int main() {
   }
 
   while (true) {
-    sleep(10);
+    auto start = std::chrono::system_clock::now();
+    int prv = g_req_num;
+    sleep(1);
+    printf("request count: %d\n", g_req_num);
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double, std::milli> diff = end - start;
+    printf("Average qps: %lf\n", (double)(g_req_num - prv) / (diff.count() / 1000));
   }
 
   return 0;

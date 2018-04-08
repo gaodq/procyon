@@ -189,6 +189,9 @@ void Connection::PerformRead() {
       break;
     } else if (rn > 0) {
       OnDataAvailable(rn);
+      if (rn < static_cast<ssize_t>(len)) {
+        return;
+      }
     } else {
       // EOF
       break;

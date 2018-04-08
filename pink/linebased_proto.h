@@ -7,8 +7,6 @@
 
 namespace pink {
 
-const size_t kDefaultBufferSize = 16 * 1024;
-
 class LineMsgHandler {
  public:
   virtual ~LineMsgHandler() {}

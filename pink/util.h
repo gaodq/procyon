@@ -34,6 +34,9 @@ inline bool SetThreadName(pthread_t id, const std::string& name) {
 }
 #endif
 
+#define likely(x)       __builtin_expect((x),1)
+#define unlikely(x)     __builtin_expect((x),0)
+
 bool AddrToEndPoint(const struct sockaddr_in* cliaddr, EndPoint* ep);
 bool IPPortToEndPoint(const std::string& ip, int port, EndPoint* ep);
 bool StrToEndPoint(const std::string& ip_port, EndPoint* ep);

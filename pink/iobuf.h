@@ -11,7 +11,7 @@ class Block {
  public:
   typedef std::atomic<int> SharedInfo;
 
-  Block(size_t capacity);
+  Block();
   Block(const Block& b);
   ~Block();
 
@@ -56,13 +56,11 @@ class Block {
 };
 
 class IOBuf {
-  const size_t kDefaultBufferSize = 16 * 1024;
-
  public:
   IOBuf() : length_(0) {}
   ~IOBuf();
 
-  std::pair<void*, size_t> PreAllocate(size_t size);
+  std::pair<void*, size_t> PreAllocate();
   void PostAllocate(size_t size);
 
   size_t length() { return length_; }
@@ -72,9 +70,7 @@ class IOBuf {
   const char* data();
   const char* tail();
 
-  void Append(std::unique_ptr<Block>&& block);
   void Append(const char* data, size_t size);
-  std::unique_ptr<Block> Pop();
 
   void TrimStart(size_t amount);
   void TrimEnd(size_t amount);
@@ -86,6 +82,9 @@ class IOBuf {
   size_t TEST_BlockCount();
 
  private:
+  void Append(std::unique_ptr<Block>&& block);
+  std::unique_ptr<Block> Pop();
+
   size_t length_;
   std::unique_ptr<Block> head_;
 };

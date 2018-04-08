@@ -1,18 +1,18 @@
-#include "iobuf.h"
+#include "pink/iobuf.h"
+#include "pink/util.h"
 
 #include <string.h>
+#include <stack>
 
 namespace pink {
 
-Block::Block(size_t capacity)
+Block::Block()
       : next_(this),
         prev_(this) {
-  size_t minsize = capacity + sizeof(SharedInfo);
-  size_t goodsize = (minsize + 7) & ~7;
-  buffer_ = static_cast<char*>(malloc(goodsize));
+  buffer_ = static_cast<char*>(malloc(kDefaultBufferSize));
   data_ = buffer_;
   length_ = 0;
-  capacity_ = goodsize;
+  capacity_ = kDefaultBufferSize;
   char* info_start = buffer_ + capacity_ - sizeof(SharedInfo);
   SharedInfo* info = new(info_start) SharedInfo;
   info->store(1);
@@ -71,19 +71,18 @@ IOBuf::~IOBuf() {
   }
 }
 
-std::pair<void*, size_t> IOBuf::PreAllocate(size_t size) {
-  size_t alloc_size = std::max(size, kDefaultBufferSize);
+std::pair<void*, size_t> IOBuf::PreAllocate() {
   std::pair<void*, size_t> res;
 
   if (!head_) {
-    head_.reset(new Block(alloc_size));
+    head_.reset(new Block);
     res.first = head_->buffer_;
     res.second = head_->capacity_;
   } else if (head_->prev_->Space() > 0) {
     res.first = head_->tail();
     res.second = head_->Space();
   } else {
-    std::unique_ptr<Block> nb(new Block(alloc_size));
+    std::unique_ptr<Block> nb(new Block);
     res.first = nb->buffer_;
     res.second = nb->capacity_;
     Append(std::move(nb));
@@ -102,8 +101,8 @@ char IOBuf::ByteAt(size_t pos) {
   assert(pos < length_);
   char res = -1;
   Block* b = head_.get();
-  while (b) {
-    if (pos < b->length_) {
+  while (likely(b != nullptr)) {
+    if (likely(pos < b->length_)) {
       res = *(b->data_ + pos);
       break;
     }
@@ -149,7 +148,7 @@ void IOBuf::Append(std::unique_ptr<Block>&& block) {
 void IOBuf::Append(const char* data, size_t size) {
   size_t remain = size;
   while (remain) {
-    auto mem = PreAllocate(remain);
+    auto mem = PreAllocate();
     size_t copy_size = std::min(mem.second, size);
     memcpy(mem.first, data, copy_size);
     remain -= copy_size;
@@ -214,7 +213,7 @@ void IOBuf::TrimEnd(size_t amount) {
     } else {
       rear->prev_->next_ = rear->next_;
       rear->next_->prev_ = rear->prev_;
-      rear->Unref();
+      delete rear;
     }
   }
 }
