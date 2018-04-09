@@ -12,7 +12,7 @@ Block::Block()
   buffer_ = static_cast<char*>(malloc(kDefaultBufferSize));
   data_ = buffer_;
   length_ = 0;
-  capacity_ = kDefaultBufferSize;
+  capacity_ = kDefaultBufferSize - sizeof(SharedInfo);
   char* info_start = buffer_ + capacity_ - sizeof(SharedInfo);
   SharedInfo* info = new(info_start) SharedInfo;
   info->store(1);
@@ -172,8 +172,12 @@ std::unique_ptr<Block> IOBuf::Pop() {
   rear->next_ = new_head;
   new_head->prev_ = rear;
 
+  head_->next_ = head_.get();
+  head_->prev_ = head_.get();
+
   std::unique_ptr<Block> nh(new_head);
   head_.swap(nh);
+
   return nh;
 }
 

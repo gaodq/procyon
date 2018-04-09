@@ -7,6 +7,8 @@
 
 namespace pink {
 
+const size_t kDefaultBufferSize = 16 * 1024;
+
 class Block {
  public:
   typedef std::atomic<int> SharedInfo;
@@ -28,10 +30,10 @@ class Block {
     length_ += size;
   }
 
-  size_t Space() { return capacity_ - length_; }
+  size_t Space() { return (buffer_ + capacity_) - (data_ + length_); }
 
   const char* data() { return data_; }
-  char* tail() { return buffer_ + length_; }
+  char* tail() { return data_ + length_; }
 
   std::string ToString() { return std::string(data_, length_); }
 

@@ -1,8 +1,10 @@
 #include "pink/linebased_proto.h"
+#include "pink/xdebug.h"
 
 namespace pink {
 
 void LineBasedConn::OnDataAvailable(size_t size) {
+  log_info("receive data size: %lu", size);
   buffer_.PostAllocate(size);
   size_t pos = 0;
   while (pos < buffer_.length()) {
