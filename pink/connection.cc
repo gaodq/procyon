@@ -181,6 +181,10 @@ void Connection::PerformRead() {
     size_t len;
     GetReadBuffer(&buffer, &len);
     ssize_t rn = read(conn_fd_, buffer, len);
+    if (rn == 0) {
+      Close();
+      return;
+    }
     if (rn < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         return;
@@ -192,12 +196,8 @@ void Connection::PerformRead() {
       if (rn < static_cast<ssize_t>(len)) {
         return;
       }
-    } else {
-      // EOF
-      break;
     }
   }
-  Close();
 }
 
 ssize_t Connection::WriteImpl(const char* data, size_t size) {

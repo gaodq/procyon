@@ -79,8 +79,8 @@ std::pair<void*, size_t> IOBuf::PreAllocate() {
     res.first = head_->buffer_;
     res.second = head_->capacity_;
   } else if (head_->prev_->Space() > 0) {
-    res.first = head_->tail();
-    res.second = head_->Space();
+    res.first = head_->prev_->tail();
+    res.second = head_->prev_->Space();
   } else {
     std::unique_ptr<Block> nb(new Block);
     res.first = nb->buffer_;
