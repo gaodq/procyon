@@ -30,7 +30,7 @@ endif
 
 #-----------------------------------------------
 
-SRC_DIR=pink
+SRC_DIR=procyon
 VERSION_CC=$(SRC_DIR)/build_version.cc
 LIB_SOURCES :=  $(VERSION_CC) \
 				$(filter-out $(VERSION_CC), $(wildcard $(SRC_DIR)/*.cc))
@@ -98,11 +98,11 @@ LIBOBJECTS = $(LIB_SOURCES:.cc=.o)
 
 # if user didn't config LIBNAME, set the default
 ifeq ($(LIBNAME),)
-# we should only run pink in production with DEBUG_LEVEL 0
+# we should only run procyon in production with DEBUG_LEVEL 0
 ifeq ($(DEBUG_LEVEL),0)
-        LIBNAME=libpink
+        LIBNAME=libprocyon
 else
-        LIBNAME=libpink_debug
+        LIBNAME=libprocyon_debug
 endif
 endif
 OUTPUT = output
@@ -110,13 +110,14 @@ LIBOUTPUT = $(OUTPUT)/lib
 dummy := $(shell mkdir -p $(LIBOUTPUT))
 LIBRARY = $(LIBOUTPUT)/${LIBNAME}.a
 
-TESTS = test/pink_thread_test
+TESTS = test/bg_thread_test \
+				test/iobuf_test
 
 .PHONY: clean dbg static_lib all example
 
 all: $(LIBRARY)
-	$(AM_V_at)mkdir -p $(OUTPUT)/include/pink
-	$(AM_V_at)cp -r pink/*.h $(OUTPUT)/include/pink
+	$(AM_V_at)mkdir -p $(OUTPUT)/include/procyon
+	$(AM_V_at)cp -r procyon/*.h $(OUTPUT)/include/procyon
 
 # example:
 # 	@make -C examples PINK_PATH=$(CURDIR)/.. DEBUG_LEVEL=$(DEBUG_LEVEL)
@@ -126,8 +127,8 @@ check: $(LIBRARY)
 	$(AM_V_at)for t in $(notdir $(TESTS)); do echo "***** Running $$t"; ./test/$$t || exit 1; done
 
 dbg: $(LIBRARY)
-	$(AM_V_at)mkdir -p $(OUTPUT)/include/pink
-	$(AM_V_at)cp -r pink/*.h $(OUTPUT)/include/pink
+	$(AM_V_at)mkdir -p $(OUTPUT)/include/procyon
+	$(AM_V_at)cp -r procyon/*.h $(OUTPUT)/include/procyon
 
 $(LIBRARY): $(LIBOBJECTS)
 	$(AM_V_at)rm -f $@

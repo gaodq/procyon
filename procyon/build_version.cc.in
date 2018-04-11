@@ -1,0 +1,4 @@
+#include "procyon/build_version.h"
+const char* procyon_build_git_sha = "procyon_build_git_sha:@@GIT_SHA@@";
+const char* procyon_build_git_date = "procyon_build_git_date:@@GIT_DATE_TIME@@";
+const char* procyon_build_compile_date = __DATE__;
