@@ -29,9 +29,21 @@ class IOThreadPool {
   int Start();
   int Stop();
 
+  class Observer {
+   public:
+    virtual void ThreadStarted(pthread_t pid) = 0;
+    virtual void ThreadStoped(pthread_t pid) = 0;
+
+    virtual ~Observer() = default;
+  };
+
+  void AddObserver(std::shared_ptr<Observer> o);
+  void RemoveObserver(std::shared_ptr<Observer> o);
+
   std::shared_ptr<IOThread> NextThread();
 
  private:
+  std::vector<std::shared_ptr<Observer>> observers_;
   std::vector<std::shared_ptr<IOThread>> threads_;
   int thread_num_;
   int index_;

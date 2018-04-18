@@ -36,6 +36,9 @@ int IOThreadPool::Start() {
     if (ret != 0) {
       return ret;
     }
+    for (auto o : observers_) {
+      o->ThreadStarted(threads_[i]->thread_id());
+    }
   }
   return 0;
 }
@@ -46,8 +49,24 @@ int IOThreadPool::Stop() {
     if (ret != 0) {
       return ret;
     }
+    for (auto o : observers_) {
+      o->ThreadStoped(threads_[i]->thread_id());
+    }
   }
   return 0;
+}
+
+void IOThreadPool::AddObserver(std::shared_ptr<Observer> o) {
+  observers_.push_back(o);
+}
+
+void IOThreadPool::RemoveObserver(std::shared_ptr<Observer> o) {
+  for (auto it = observers_.begin(); it != observers_.end(); it++) {
+    if (*it == o) {
+      observers_.erase(it);
+      return;
+    }
+  }
 }
 
 std::shared_ptr<IOThread> IOThreadPool::NextThread() {

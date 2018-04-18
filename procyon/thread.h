@@ -21,7 +21,7 @@ class Thread {
   };
 
   Thread(std::shared_ptr<Runnable> runnable, bool detached = false);
-  virtual ~Thread() {}
+  virtual ~Thread() = default;
 
   enum STATE {kUninitialized, kStarted, kStopped};
 
