@@ -42,7 +42,7 @@ int HTTPConn::request_url_cb(http_parser* parser,
       break;
     }
   }
-  conn->http_req_.path.assign(at, i + 1);
+  conn->http_req_.path.assign(at, i);
 
   return 0;
 }
@@ -58,13 +58,15 @@ int HTTPConn::body_cb(http_parser* parser,
 
 int HTTPConn::headers_complete_cb(http_parser* parser) {
   HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
-  conn->handler_->HandleNewRequest(conn, conn->http_req_);
+  conn->handler_->OnNewRequest(conn, conn->http_req_);
 
   return 0;
 }
 
 int HTTPConn::message_complete_cb(http_parser* parser) {
-  // HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
+  HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
+  conn->handler_->OnComplete(conn);
+
   log_info("message_complete");
   http_parser_init(parser, HTTP_REQUEST);
 

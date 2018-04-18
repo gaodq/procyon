@@ -36,9 +36,9 @@ class HTTPMsgHandler {
  public:
   virtual ~HTTPMsgHandler() {}
 
-  virtual void HandleNewRequest(Connection* conn, const HTTPRequest& msg) {}
-
+  virtual void OnNewRequest(Connection* conn, const HTTPRequest& msg) {}
   virtual void OnBody(Connection* conn, const char* data, size_t length) {}
+  virtual void OnComplete(Connection* conn) {}
 
   void WriteHeaders(Connection* conn, http_status status,
                     const std::unordered_map<std::string, std::string>& headers,
