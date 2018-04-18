@@ -5,6 +5,7 @@
 #include "procyon/bg_thread.h"
 
 #include <unistd.h>
+#include <string.h>
 #include <iostream>
 #include <memory>
 #include <atomic>
@@ -17,8 +18,7 @@ class CustomHandler : public procyon::HTTPMsgHandler {
  public:
   virtual void HandleNewRequest(procyon::Connection* conn,
                                 const procyon::HTTPRequest& req) override {
-    std::cout << "* Method: " <<
-      http_method_str(static_cast<enum http_method>(req.method)) << "\n";
+    std::cout << "* Method: " << http_method_str(req.method) << "\n";
     std::cout << "* URL: " << req.req_url << "\n";
     std::cout << "* Path: " << req.path << "\n";
     std::cout << "* Content-Type: " << req.content_type << "\n";
@@ -37,7 +37,14 @@ class CustomHandler : public procyon::HTTPMsgHandler {
     for (auto& item : req.postform_values) {
       std::cout << "   " << item.first << ": " << item.second << "\n";
     }
-    Write(conn, "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
+
+    int content_size = 1024 * 1024;
+    char* data = static_cast<char*>(malloc(content_size));
+    memset(data, 'a', content_size);
+
+    std::unordered_map<std::string, std::string> headers;
+    WriteHeaders(conn, HTTP_STATUS_OK, headers, content_size);
+    WriteContent(conn, data, content_size);
   }
 
   virtual void OnBody(procyon::Connection* conn,

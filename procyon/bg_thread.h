@@ -62,7 +62,7 @@ class BGThread {
   std::queue<BGItem> queue_;
   std::priority_queue<TimerItem> timer_queue_;
 
-  volatile bool should_stop_;
+  volatile bool running_;
 
   size_t thread_num_;
   size_t max_queue_;

@@ -174,6 +174,20 @@ static const char *method_strings[] =
 #undef XX
   };
 
+static const char *status_strings[] =
+  {
+#define XX(num, name, string) #string,
+  HTTP_STATUS_MAP(XX)
+#undef XX
+  };
+
+static const int status_code[] =
+  {
+#define XX(num, name, string) num,
+  HTTP_STATUS_MAP(XX)
+#undef XX
+  };
+
 
 /* Tokens as defined by rfc 2616. Also lowercases them.
  *        token       = 1*<any CHAR except CTLs or separators>
@@ -2106,6 +2120,15 @@ const char *
 http_errno_description(enum http_errno err) {
   assert(((size_t) err) < ARRAY_SIZE(http_strerror_tab));
   return http_strerror_tab[err].description;
+}
+
+const char *
+http_status_name(enum http_status s) {
+  return ELEM_AT(status_strings, s, "<unknown>");
+}
+
+int http_status_code(enum http_status s) {
+  return ELEM_AT(status_code, s, 0);
 }
 
 static enum http_host_state

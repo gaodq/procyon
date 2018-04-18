@@ -7,7 +7,7 @@ int HTTPConn::message_begin_cb(http_parser* parser) {
   HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
   log_info("message_begin");
   conn->http_req_.Clear();
-  conn->http_req_.method = parser->method;
+  conn->http_req_.method = static_cast<http_method>(parser->method);
 
   return 0;
 }
@@ -81,6 +81,39 @@ int HTTPConn::chunk_complete_cb(http_parser* parser) {
   // HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
 
   return 0;
+}
+
+void HTTPMsgHandler::WriteHeaders(
+    Connection* conn, http_status status,
+    const std::unordered_map<std::string, std::string>& headers,
+    size_t content_length) {
+  char buf[256];
+  std::string headers_msg;
+  remain_length_ = content_length;
+  int len = snprintf(buf, 256, "HTTP/1.1 %d %s\r\nContent-Length: %lu\r\n",
+                     http_status_code(status), http_status_name(status),
+                     content_length);
+  headers_msg.append(buf, len);
+  for (const auto& item : headers) {
+    headers_msg.append(item.first);
+    headers_msg.append(": ");
+    headers_msg.append(item.second);
+    headers_msg.append("\r\n");
+  }
+  headers_msg.append("\r\n");
+
+  Write(conn, headers_msg.data(), headers_msg.size());
+}
+
+void HTTPMsgHandler::WriteContent(Connection* conn,
+                                  const char* data, size_t length) {
+  if (length >= remain_length_) {
+    Write(conn, data, remain_length_);
+    remain_length_ = 0;
+  } else {
+    Write(conn, data, length);
+    remain_length_ -= length;
+  }
 }
 
 HTTPConn::HTTPConn(HTTPMsgHandler* handler)

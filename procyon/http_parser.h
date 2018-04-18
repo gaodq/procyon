@@ -153,7 +153,7 @@ typedef int (*http_cb) (http_parser*);
 
 enum http_status
   {
-#define XX(num, name, string) HTTP_STATUS_##name = num,
+#define XX(num, name, string) HTTP_STATUS_##name,
   HTTP_STATUS_MAP(XX)
 #undef XX
   };
@@ -412,6 +412,12 @@ const char *http_errno_name(enum http_errno err);
 
 /* Return a string description of the given error */
 const char *http_errno_description(enum http_errno err);
+
+/* Return a string name of the given status */
+const char *http_status_name(enum http_status status);
+
+/* Return a int code of the given status */
+int http_status_code(enum http_status status);
 
 /* Initialize all http_parser_url members to 0 */
 void http_parser_url_init(struct http_parser_url *u);

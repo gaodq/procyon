@@ -8,7 +8,7 @@
 namespace procyon {
 
 BGThread::BGThread(size_t thread_num, size_t max_queue)
-    : should_stop_(false),
+    : running_(false),
       thread_num_(thread_num),
       max_queue_(max_queue) {
   for (size_t i = 0; i < thread_num_; i++) {
@@ -18,7 +18,8 @@ BGThread::BGThread(size_t thread_num, size_t max_queue)
 }
 
 int BGThread::Start() {
-  int res;
+  int res = 0;
+  running_ = true;
   for (size_t i = 0; i < thread_num_; i++) {
     res = thread_list_[i]->Start();
     if (res != 0) {
@@ -29,17 +30,17 @@ int BGThread::Start() {
 }
 
 void BGThread::Stop() {
-  if (should_stop_) {
+  if (!running_) {
     return;
   }
-  should_stop_ = true;
+  running_ = false;
   rsignal_.notify_one();
   wsignal_.notify_one();
   Join();
 }
 
 int BGThread::Join() {
-  int res;
+  int res = 0;
   for (size_t i = 0; i < thread_num_; i++) {
     res = thread_list_[i]->Join();
     if (res != 0) {
@@ -52,9 +53,9 @@ int BGThread::Join() {
 void BGThread::Schedule(Func fn, void* arg) {
   std::unique_lock<std::mutex> lk(mu_);
   wsignal_.wait(lk, [this]{
-    return (queue_.size() < max_queue_ || should_stop_);
+    return (queue_.size() < max_queue_ || !running_);
   });
-  if (!should_stop_) {
+  if (running_) {
     queue_.push(BGItem(fn, arg));
     rsignal_.notify_one();
   }
@@ -84,14 +85,14 @@ void BGThread::QueueClear() {
 }
 
 void BGThread::Worker::run() {
-  while (!bg_thread_->should_stop_) {
+  while (bg_thread_->running_) {
     std::unique_lock<std::mutex> lk(bg_thread_->mu_);
     bg_thread_->rsignal_.wait(lk, [this]{ 
       return (!bg_thread_->queue_.empty() ||
               !bg_thread_->timer_queue_.empty() ||
-              bg_thread_->should_stop_);
+              !bg_thread_->running_);
     });
-    if (bg_thread_->should_stop_) {
+    if (!bg_thread_->running_) {
       break;
     }
     if (!bg_thread_->timer_queue_.empty()) {
@@ -107,7 +108,7 @@ void BGThread::Worker::run() {
         lk.unlock();
         fn(arg);
         continue;
-      } else if (bg_thread_->queue_.empty() && !bg_thread_->should_stop_) {
+      } else if (bg_thread_->queue_.empty() && bg_thread_->running_) {
         std::chrono::microseconds t(timer_item.exec_time - unow);
         bg_thread_->rsignal_.wait_for(lk, t);
         continue;
