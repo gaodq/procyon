@@ -29,6 +29,7 @@ class Connection {
                 const EndPoint* local_side);
 
   int fd() const { return conn_fd_; }
+  State state() { return state_; }
 
   std::shared_ptr<EventbaseLoop> event_loop() {
     return io_thread_->event_loop();

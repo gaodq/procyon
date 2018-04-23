@@ -1,10 +1,14 @@
 #include "procyon/http_proto.h"
 #include "procyon/xdebug.h"
+#include <algorithm>
 
 namespace procyon {
 
 int HTTPConn::message_begin_cb(http_parser* parser) {
   HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
+  if (conn->state() != Connection::kConnected) {
+    return -1;
+  }
   log_info("message_begin");
   conn->http_req_.Clear();
   conn->http_req_.method = static_cast<http_method>(parser->method);
@@ -15,6 +19,9 @@ int HTTPConn::message_begin_cb(http_parser* parser) {
 int HTTPConn::header_field_cb(http_parser* parser,
                               const char *at, size_t length) {
   HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
+  if (conn->state() != Connection::kConnected) {
+    return -1;
+  }
   conn->tmp_header_k.append(at, length);
 
   return 0;
@@ -23,8 +30,14 @@ int HTTPConn::header_field_cb(http_parser* parser,
 int HTTPConn::header_value_cb(http_parser* parser,
                               const char *at, size_t length) {
   HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
-  conn->http_req_.headers.insert(
-    std::make_pair(conn->tmp_header_k, std::string(at, length)));
+  if (conn->state() != Connection::kConnected) {
+    return -1;
+  }
+  std::string& k = conn->tmp_header_k;
+  std::string v(at, length);
+  std::transform(k.begin(), k.end(), k.begin(), ::tolower);
+  std::transform(v.begin(), v.end(), v.begin(), ::tolower);
+  conn->http_req_.headers.insert(std::make_pair(k, v));
   conn->tmp_header_k.clear();
 
   return 0;
@@ -33,6 +46,9 @@ int HTTPConn::header_value_cb(http_parser* parser,
 int HTTPConn::request_url_cb(http_parser* parser,
                              const char *at, size_t length) {
   HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
+  if (conn->state() != Connection::kConnected) {
+    return -1;
+  }
   conn->http_req_.req_url.assign(at, length);
 
   size_t i = 0;
@@ -50,6 +66,9 @@ int HTTPConn::request_url_cb(http_parser* parser,
 int HTTPConn::body_cb(http_parser* parser,
                       const char *at, size_t length) {
   HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
+  if (conn->state() != Connection::kConnected) {
+    return -1;
+  }
   log_info("body_cb");
   conn->handler_->OnBody(conn, at, length);
 
@@ -58,6 +77,9 @@ int HTTPConn::body_cb(http_parser* parser,
 
 int HTTPConn::headers_complete_cb(http_parser* parser) {
   HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
+  if (conn->state() != Connection::kConnected) {
+    return -1;
+  }
   conn->handler_->OnNewRequest(conn, conn->http_req_);
 
   return 0;
@@ -65,6 +87,9 @@ int HTTPConn::headers_complete_cb(http_parser* parser) {
 
 int HTTPConn::message_complete_cb(http_parser* parser) {
   HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
+  if (conn->state() != Connection::kConnected) {
+    return -1;
+  }
   conn->handler_->OnComplete(conn);
 
   log_info("message_complete");

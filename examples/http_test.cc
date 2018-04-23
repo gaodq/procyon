@@ -16,8 +16,12 @@ procyon::BGThread worker_threads(4);
 
 class CustomHandler : public procyon::HTTPMsgHandler {
  public:
-  virtual void HandleNewRequest(procyon::Connection* conn,
+  virtual void OnNewRequest(procyon::Connection* conn,
                                 const procyon::HTTPRequest& req) override {
+    if (req.headers.count("expect")) {
+      WriteHeaders(conn, HTTP_STATUS_CONTINUE, headers_, 0);
+      return;
+    }
     std::cout << "* Method: " << http_method_str(req.method) << "\n";
     std::cout << "* URL: " << req.req_url << "\n";
     std::cout << "* Path: " << req.path << "\n";
@@ -38,19 +42,21 @@ class CustomHandler : public procyon::HTTPMsgHandler {
       std::cout << "   " << item.first << ": " << item.second << "\n";
     }
 
-    int content_size = 1024 * 1024;
-    char* data = static_cast<char*>(malloc(content_size));
-    memset(data, 'a', content_size);
-
-    std::unordered_map<std::string, std::string> headers;
-    WriteHeaders(conn, HTTP_STATUS_OK, headers, content_size);
-    WriteContent(conn, data, content_size);
   }
 
   virtual void OnBody(procyon::Connection* conn,
                       const char* data, size_t length) override {
     std::cout << std::string(data, length) << std::endl;
   }
+
+  virtual void OnComplete(procyon::Connection* conn) override {
+    std::string content("nihaoa");
+    WriteHeaders(conn, HTTP_STATUS_OK, headers_, content.size());
+    WriteContent(conn, content);
+  }
+
+ private:
+    std::unordered_map<std::string, std::string> headers_;
 };
 
 class MyConnFactory : public procyon::ConnectionFactory {

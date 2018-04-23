@@ -952,7 +952,13 @@ reexecute:
           case 'M': parser->method = HTTP_MKCOL; /* or MOVE, MKACTIVITY, MERGE, M-SEARCH, MKCALENDAR */ break;
           case 'N': parser->method = HTTP_NOTIFY; break;
           case 'O': parser->method = HTTP_OPTIONS; break;
-          case 'P': parser->method = HTTP_POST;
+          case 'P': if (p != data + len) {
+                      if (*(p + 1) == 'U') {
+                        parser->method = HTTP_PUT;
+                        break;
+                      }
+                    }
+                    parser->method = HTTP_POST;
             /* or PROPFIND|PROPPATCH|PUT|PATCH|PURGE */
             break;
           case 'R': parser->method = HTTP_REPORT; /* or REBIND */ break;
