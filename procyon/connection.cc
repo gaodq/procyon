@@ -309,6 +309,7 @@ void Connection::Close(/* CLOSEREASON reason */) {
     }
     state_ = kNoConnect;
     dispatcher_->OnConnClosed(this);
+    close(conn_fd_);
   });
 }
 
