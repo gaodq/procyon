@@ -2,6 +2,8 @@
 
 #include <memory>
 #include <list>
+#include <future>
+#include <chrono>
 
 #include "procyon/options.h"
 #include "procyon/endpoint.h"
@@ -15,7 +17,6 @@ class Connection {
  public:
   enum State {
     kNoConnect,
-    kConnecting,
     kConnected,
   };
 
@@ -37,12 +38,14 @@ class Connection {
 
   virtual void GetReadBuffer(void** buffer, size_t* len) = 0;
   virtual void OnDataAvailable(size_t size) = 0;
-  bool Write(const void* data, size_t size, bool block = false);
 
+  std::future<bool> Write(const void* data, size_t size);
+
+  /* TODO Support Client
   bool Connect(const ClientOptions& opts,
                const EndPoint* remote_side,
                const EndPoint* local_side = nullptr);
-  bool BlockRead(void* data, size_t size, size_t* received);
+  */
 
   int IdleSeconds();
 
@@ -62,11 +65,16 @@ class Connection {
   ssize_t WriteImpl(const char* data, size_t size);
 
   int conn_fd_;
-  uint64_t last_active_time_;
+  std::chrono::time_point<std::chrono::system_clock> last_active_time_;
   std::shared_ptr<IOThread> io_thread_;
   std::shared_ptr<IOHandler> io_handler_;
 
-  std::list<std::string> pending_output_; // TODO thread safe
+  struct WriteRequest {
+    std::string data;
+    std::promise<bool> res;
+  };
+  std::mutex pending_output_mu_;
+  std::list<WriteRequest> pending_output_; // TODO lock free
 
   Dispatcher* dispatcher_;
 };

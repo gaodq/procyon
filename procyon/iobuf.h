@@ -7,7 +7,7 @@
 
 namespace procyon {
 
-const size_t kDefaultBufferSize = 8 * 1024;
+const size_t kDefaultBufferSize = 512 * 1024;
 
 class Block {
  public:

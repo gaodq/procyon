@@ -15,7 +15,6 @@
 #include "procyon/dispatcher.h"
 #include "procyon/eventbase_loop.h"
 #include "procyon/io_thread.h"
-#include "procyon/util.h"
 #include "procyon/xdebug.h"
 
 namespace procyon {
@@ -41,7 +40,7 @@ struct Connection::IOHandler : public EventHandler {
 
 Connection::Connection()
     : state_(kNoConnect),
-      last_active_time_(util::NowMicros()),
+      last_active_time_(std::chrono::system_clock::now()),
       io_handler_(new IOHandler(this)) {
 }
 
@@ -57,6 +56,7 @@ void Connection::InitConn(int conn_fd, std::shared_ptr<IOThread> io_thread,
   state_ = kConnected;
 }
 
+/* TODO Support Client
 bool Connection::Connect(const ClientOptions& opts,
                          const EndPoint* remote_side,
                          const EndPoint* local_side) {
@@ -162,7 +162,7 @@ bool Connection::Connect(const ClientOptions& opts,
 
     // connect ok
     remote_side_ = *remote_side;
-    last_active_time_ = util::NowMicros();
+    last_active_time_ = std::chrono::system_clock::now();
     return true;
   }
   if (p == nullptr) {
@@ -173,9 +173,10 @@ bool Connection::Connect(const ClientOptions& opts,
   freeaddrinfo(p);
   return false;
 }
+*/
 
 void Connection::PerformRead() {
-  last_active_time_ = util::NowMicros();
+  last_active_time_ = std::chrono::system_clock::now();
   while (true) {
     void* buffer;
     size_t len;
@@ -218,88 +219,81 @@ ssize_t Connection::WriteImpl(const char* data, size_t size) {
 }
 
 void Connection::PerformWrite() {
-  assert(!pending_output_.empty());
-  last_active_time_ = util::NowMicros();
+  last_active_time_ = std::chrono::system_clock::now();
+
+  io_handler_->DisableWrite();
+
+  std::unique_lock<std::mutex> lk(pending_output_mu_);
   while (!pending_output_.empty()) {
-    const std::string& buf = pending_output_.front();
+    WriteRequest& req = pending_output_.front();
+    const std::string& buf = req.data;
+    std::promise<bool> res = std::move(req.res);
+    lk.unlock();
+
     ssize_t sended = WriteImpl(buf.data(), buf.size());
     if (sended < 0) {
       // Error
+      res.set_value(false);
       Close();
       return;
     } else {
       std::string remain;
       if (sended < static_cast<ssize_t>(buf.size())) {
-        remain.assign(buf.data() + sended + 1, buf.size() - sended - 1);
+        remain.assign(buf.data() + sended + 1, buf.size() - sended);
+        io_handler_->EnableWrite();
+      } else {
+        assert(sended == static_cast<ssize_t>(buf.size()));
+        res.set_value(true);
       }
+      lk.lock();
       pending_output_.pop_front();
-      if (!remain.empty()) {
-        pending_output_.emplace_front(remain);
-        break;
+      if (!remain.empty()) {  // New pending data
+        pending_output_.emplace_front(WriteRequest{std::move(remain), std::move(res)});
+        return;
       }
     }
   }
-  if (pending_output_.empty()) {
-    io_handler_->DisableWrite();
-  }
 }
 
-bool Connection::Write(const void* data, size_t size, bool block) {
+std::future<bool> Connection::Write(const void* data, size_t size) {
   assert(io_handler_);
-  last_active_time_ = util::NowMicros();
+  last_active_time_ = std::chrono::system_clock::now();
   const char* buf = reinterpret_cast<const char*>(data);
-  if (!pending_output_.empty() && !block) {
-    pending_output_.emplace_back(std::string(buf, size));
+  std::promise<bool> res;
+  std::future<bool> wait_complete = res.get_future();
+
+  std::unique_lock<std::mutex> lk(pending_output_mu_);
+  if (!pending_output_.empty()) {
+    pending_output_.emplace_back(
+      WriteRequest{std::string(buf, size), std::move(res)});
     io_handler_->EnableWrite();
   } else {
+    pending_output_mu_.unlock();
     ssize_t sended = WriteImpl(buf, size);
 
     if (sended < 0) {
-      return false;
+      // Error
+      res.set_value(false);
+      Close();
     } else if (sended < static_cast<ssize_t>(size)) {
-      if (!block) {
-        pending_output_.emplace_back(std::string(buf + sended, size - sended));
-        io_handler_->EnableWrite();
-      } else {
-        return false;
-      }
+      pending_output_mu_.lock();
+      pending_output_.emplace_back(
+        WriteRequest{std::string(buf + sended, size - sended), std::move(res)});
+      io_handler_->EnableWrite();
+    } else {
+      assert(sended == static_cast<ssize_t>(size));
+      // Success write all data
+      res.set_value(true);
     }
   }
 
-  return true;
-}
-
-bool Connection::BlockRead(void* data, size_t buf_size, size_t* received) {
-  char* rbuf = reinterpret_cast<char*>(data);
-  size_t nleft = buf_size;
-  size_t pos = 0;
-  ssize_t nread;
-
-  while (nleft > 0) {
-    if ((nread = read(conn_fd_, rbuf + pos, nleft)) < 0) {
-      if (errno == EINTR) {
-        continue;
-      } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        log_err("send timeout: %s", strerror(errno));
-        return false;
-      } else {
-        log_err("read error: %s", strerror(errno));
-        return false;
-      }
-    } else if (nread == 0) {
-      log_err("socket closed");
-      return false;
-    }
-    nleft -= nread;
-    pos += nread;
-  }
-
-  *received = pos;
-  return true;
+  return wait_complete;
 }
 
 int Connection::IdleSeconds() {
-  return (util::NowMicros() - last_active_time_) / 1000000;
+  auto diff = std::chrono::duration_cast<std::chrono::seconds>(
+    std::chrono::system_clock::now() - last_active_time_);
+  return diff.count();
 }
 
 void Connection::Close(/* CLOSEREASON reason */) {

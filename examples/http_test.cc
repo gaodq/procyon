@@ -46,7 +46,7 @@ class CustomHandler : public procyon::HTTPMsgHandler {
 
   virtual void OnBody(procyon::Connection* conn,
                       const char* data, size_t length) override {
-    std::cout << std::string(data, length) << std::endl;
+    std::cout << "length: " << length << std::endl;
   }
 
   virtual void OnComplete(procyon::Connection* conn) override {

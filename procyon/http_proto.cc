@@ -9,7 +9,7 @@ int HTTPConn::message_begin_cb(http_parser* parser) {
   if (conn->state() != Connection::kConnected) {
     return -1;
   }
-  log_info("message_begin");
+  log_info("message_begin, content-length: %lu", parser->content_length);
   conn->http_req_.Clear();
   conn->http_req_.method = static_cast<http_method>(parser->method);
 
@@ -100,12 +100,14 @@ int HTTPConn::message_complete_cb(http_parser* parser) {
 
 int HTTPConn::chunk_header_cb(http_parser* parser) {
   // HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
+  log_info("chunk_header_cb, content-length: %lu", parser->content_length);
 
   return 0;
 }
 
 int HTTPConn::chunk_complete_cb(http_parser* parser) {
   // HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
+  log_info("chunk_complete_cb");
 
   return 0;
 }

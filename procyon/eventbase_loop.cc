@@ -81,11 +81,11 @@ const int kPinkEpollTimeout = 1000;
 void EventbaseLoop::run() {
   struct epoll_event e[kPinkMaxClients];
   while (!should_stop_) {
-    std::vector<std::pair<std::function<void()>, bool>> cbs, next_cbs;
     {
-    std::lock_guard<std::mutex> l(callbacks_mu_);
+    std::vector<std::pair<std::function<void()>, bool>> cbs, next_cbs;
+    std::unique_lock<std::mutex> l(callbacks_mu_);
     callbacks_.swap(cbs);
-    }
+    l.unlock();
     for (auto item : cbs) {
       auto fn = item.first;
       bool once = item.second;
@@ -94,8 +94,7 @@ void EventbaseLoop::run() {
       }
       fn();
     }
-    {
-    std::lock_guard<std::mutex> l(callbacks_mu_);
+    l.lock();
     callbacks_.insert(callbacks_.end(), next_cbs.begin(), next_cbs.end());
     }
 
@@ -113,12 +112,6 @@ void EventbaseLoop::run() {
 }
 
 void EventbaseLoop::RunInLoop(std::function<void()> fn, bool once) {
-  if (thread()->thread_id() == pthread_self()) {
-    fn();
-    if (once) {
-      return;
-    }
-  }
   std::lock_guard<std::mutex> l(callbacks_mu_);
   callbacks_.push_back(std::make_pair(fn, once));
 }
