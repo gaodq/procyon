@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "procyon/io_thread.h"
+#include "procyon/connection.h"
 
 namespace procyon {
 
@@ -23,9 +24,9 @@ struct ServerOptions {
   std::shared_ptr<IOThreadPool> worker_threads =
     std::shared_ptr<IOThreadPool>(new IOThreadPool(1));
 
-  std::function<void(const Connection*)> error_callback;
+  std::function<void(std::shared_ptr<Connection>)> error_callback;
 
-  std::function<void(const Connection*)> close_callback;
+  std::function<void(std::shared_ptr<Connection>)> close_callback;
 
   int connection_idle_timeout_s = 180; // 3 minutes
 };

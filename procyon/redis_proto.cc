@@ -4,11 +4,11 @@
 
 namespace procyon {
 
-void RedisMsgHandler::ProcessInlineBuffer(Connection* conn,
+void RedisMsgHandler::ProcessInlineBuffer(ConnectionPtr conn,
                                           std::unique_ptr<IOBuf>&& line) {
 }
 
-void RedisMsgHandler::ProcessMultibulkBuffer(Connection* conn,
+void RedisMsgHandler::ProcessMultibulkBuffer(ConnectionPtr conn,
                                              std::unique_ptr<IOBuf>&& line) {
   if (multibulk_len_ == -1) {
     std::string num = line->ToString();
@@ -30,7 +30,7 @@ void RedisMsgHandler::ProcessMultibulkBuffer(Connection* conn,
   }
 }
 
-void RedisMsgHandler::HandleNewLine(Connection* conn,
+void RedisMsgHandler::HandleNewLine(ConnectionPtr conn,
                                     std::unique_ptr<IOBuf>&& line) {
   if (line->ByteAt(0) == '*' || multibulk_len_ != -1) {
     ProcessMultibulkBuffer(conn, std::move(line));

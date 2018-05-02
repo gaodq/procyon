@@ -4,13 +4,12 @@
 #include <mutex>
 
 #include "procyon/options.h"
+#include "procyon/connection.h"
 #include "procyon/eventbase_loop.h"
 #include "procyon/io_thread.h"
 #include "procyon/server_socket.h"
 
 namespace procyon {
-
-class Connection;
 
 class Dispatcher {
  public:
@@ -19,8 +18,8 @@ class Dispatcher {
   bool Bind();
 
   void OnNewConnection();
-  void OnConnClosed(const Connection* conn);
-  void OnConnError(const Connection* conn);
+  void OnConnClosed(ConnectionPtr conn);
+  void OnConnError(const ConnectionPtr conn);
 
   struct AcceptHandler : EventHandler {
     explicit AcceptHandler(Dispatcher* d) : dispacher(d) {}
@@ -36,7 +35,7 @@ class Dispatcher {
   const ServerOptions opts_;
 
   ServerSocket server_socket_;
-  std::unordered_map<int, std::shared_ptr<Connection>> connections_;
+  std::unordered_map<int, ConnectionPtr> connections_;
   std::mutex conn_mu_;
 
   AcceptHandler ac_handler_;

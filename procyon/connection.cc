@@ -190,7 +190,7 @@ void Connection::PerformRead() {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         return;
       }
-      dispatcher_->OnConnError(this);
+      dispatcher_->OnConnError(shared_from_this());
       break;
     } else if (rn > 0) {
       OnDataAvailable(rn);
@@ -302,7 +302,7 @@ void Connection::Close(/* CLOSEREASON reason */) {
       return;
     }
     state_ = kNoConnect;
-    dispatcher_->OnConnClosed(this);
+    dispatcher_->OnConnClosed(shared_from_this());
     close(conn_fd_);
   });
 }

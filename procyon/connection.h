@@ -12,8 +12,11 @@
 namespace procyon {
 
 class Dispatcher;
+class Connection;
 
-class Connection {
+typedef std::shared_ptr<Connection> ConnectionPtr;
+
+class Connection : public std::enable_shared_from_this<Connection> {
  public:
   enum State {
     kNoConnect,
@@ -31,6 +34,7 @@ class Connection {
 
   int fd() const { return conn_fd_; }
   State state() { return state_; }
+  ConnectionPtr getptr() { return shared_from_this(); }
 
   std::shared_ptr<EventbaseLoop> event_loop() {
     return io_thread_->event_loop();

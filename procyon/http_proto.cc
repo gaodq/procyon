@@ -70,7 +70,7 @@ int HTTPConn::body_cb(http_parser* parser,
     return -1;
   }
   log_info("body_cb");
-  conn->handler_->OnBody(conn, at, length);
+  conn->handler_->OnBody(conn->getptr(), at, length);
 
   return 0;
 }
@@ -80,7 +80,7 @@ int HTTPConn::headers_complete_cb(http_parser* parser) {
   if (conn->state() != Connection::kConnected) {
     return -1;
   }
-  conn->handler_->OnNewRequest(conn, conn->http_req_);
+  conn->handler_->OnNewRequest(conn->getptr(), conn->http_req_);
 
   return 0;
 }
@@ -90,7 +90,7 @@ int HTTPConn::message_complete_cb(http_parser* parser) {
   if (conn->state() != Connection::kConnected) {
     return -1;
   }
-  conn->handler_->OnComplete(conn);
+  conn->handler_->OnComplete(conn->getptr());
 
   log_info("message_complete");
   http_parser_init(parser, HTTP_REQUEST);
@@ -115,7 +115,7 @@ int HTTPConn::chunk_complete_cb(http_parser* parser) {
 }
 
 void HTTPMsgHandler::WriteHeaders(
-    Connection* conn, http_status status,
+    ConnectionPtr conn, http_status status,
     const std::unordered_map<std::string, std::string>& headers,
     size_t content_length) {
   char buf[256];
@@ -136,7 +136,7 @@ void HTTPMsgHandler::WriteHeaders(
   Write(conn, headers_msg.data(), headers_msg.size());
 }
 
-void HTTPMsgHandler::WriteContent(Connection* conn,
+void HTTPMsgHandler::WriteContent(ConnectionPtr conn,
                                   const char* data, size_t length) {
   if (length >= remain_length_) {
     Write(conn, data, remain_length_);

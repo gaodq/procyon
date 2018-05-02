@@ -11,9 +11,9 @@ class LineMsgHandler {
  public:
   virtual ~LineMsgHandler() {}
 
-  virtual void HandleNewLine(Connection* conn, std::unique_ptr<IOBuf>&& line) {}
+  virtual void HandleNewLine(ConnectionPtr conn, std::unique_ptr<IOBuf>&& line) {}
 
-  void Write(Connection* conn, const std::string& msg) {
+  void Write(ConnectionPtr conn, const std::string& msg) {
     conn->Write(msg.data(), msg.size());
   }
 };
@@ -29,7 +29,7 @@ class LineBasedConn : public Connection {
   virtual void GetReadBuffer(void** buffer, size_t* len) override;
 
  private:
-  LineMsgHandler* handler_;
+  std::unique_ptr<LineMsgHandler> handler_;
 
   IOBuf buffer_;
 };

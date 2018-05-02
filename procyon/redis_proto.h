@@ -15,17 +15,17 @@ class RedisMsgHandler : public LineMsgHandler {
   }
   virtual ~RedisMsgHandler() {}
 
-  void HandleNewLine(Connection* conn, std::unique_ptr<IOBuf>&& line) override;
+  void HandleNewLine(ConnectionPtr conn, std::unique_ptr<IOBuf>&& line) override;
 
-  void ProcessInlineBuffer(Connection* conn, std::unique_ptr<IOBuf>&& line);
-  void ProcessMultibulkBuffer(Connection* conn, std::unique_ptr<IOBuf>&& line);
+  void ProcessInlineBuffer(ConnectionPtr conn, std::unique_ptr<IOBuf>&& line);
+  void ProcessMultibulkBuffer(ConnectionPtr conn, std::unique_ptr<IOBuf>&& line);
 
   virtual void HandleRedisMsg(
-      Connection* conn,
+      ConnectionPtr conn,
       const std::vector<std::unique_ptr<IOBuf>>& args) {
   }
 
-  void Write(Connection* conn, const std::string& msg) {
+  void Write(ConnectionPtr conn, const std::string& msg) {
     conn->Write(msg.data(), msg.size());
   }
 

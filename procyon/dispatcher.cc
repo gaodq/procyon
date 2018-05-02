@@ -73,7 +73,7 @@ void Dispatcher::OnNewConnection() {
   connections_.insert(std::make_pair(connfd, conn));
 }
 
-void Dispatcher::OnConnClosed(const Connection* conn) {
+void Dispatcher::OnConnClosed(ConnectionPtr conn) {
   // TODO run in loop
   log_info("Connection: %d closed", conn->fd());
   if (opts_.close_callback) {
@@ -83,7 +83,7 @@ void Dispatcher::OnConnClosed(const Connection* conn) {
   connections_.erase(conn->fd());
 }
 
-void Dispatcher::OnConnError(const Connection* conn) {
+void Dispatcher::OnConnError(ConnectionPtr conn) {
   log_info("Connection: %d error", conn->fd());
   if (opts_.error_callback) {
     opts_.error_callback(conn);

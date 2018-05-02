@@ -16,7 +16,7 @@ procyon::BGThread worker_threads(4);
 
 class CustomHandler : public procyon::HTTPMsgHandler {
  public:
-  virtual void OnNewRequest(procyon::Connection* conn,
+  virtual void OnNewRequest(procyon::ConnectionPtr conn,
                                 const procyon::HTTPRequest& req) override {
     if (req.headers.count("expect")) {
       WriteHeaders(conn, HTTP_STATUS_CONTINUE, headers_, 0);
@@ -44,12 +44,12 @@ class CustomHandler : public procyon::HTTPMsgHandler {
 
   }
 
-  virtual void OnBody(procyon::Connection* conn,
+  virtual void OnBody(procyon::ConnectionPtr conn,
                       const char* data, size_t length) override {
     std::cout << "length: " << length << std::endl;
   }
 
-  virtual void OnComplete(procyon::Connection* conn) override {
+  virtual void OnComplete(procyon::ConnectionPtr conn) override {
     std::string content("nihaoa");
     WriteHeaders(conn, HTTP_STATUS_OK, headers_, content.size());
     WriteContent(conn, content);

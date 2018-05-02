@@ -36,22 +36,22 @@ class HTTPMsgHandler {
  public:
   virtual ~HTTPMsgHandler() {}
 
-  virtual void OnNewRequest(Connection* conn, const HTTPRequest& msg) {}
-  virtual void OnBody(Connection* conn, const char* data, size_t length) {}
+  virtual void OnNewRequest(ConnectionPtr conn, const HTTPRequest& msg) {}
+  virtual void OnBody(ConnectionPtr conn, const char* data, size_t length) {}
   virtual void OnChunkBegin(size_t length) {}
   virtual void OnChunkComplete() {}
-  virtual void OnComplete(Connection* conn) {}
+  virtual void OnComplete(ConnectionPtr conn) {}
 
-  void WriteHeaders(Connection* conn, http_status status,
+  void WriteHeaders(ConnectionPtr conn, http_status status,
                     const std::unordered_map<std::string, std::string>& headers,
                     size_t content_length = 0);
-  void WriteContent(Connection* conn, const char* data, size_t length);
-  void WriteContent(Connection* conn, const std::string& msg) {
+  void WriteContent(ConnectionPtr conn, const char* data, size_t length);
+  void WriteContent(ConnectionPtr conn, const std::string& msg) {
     return WriteContent(conn, msg.data(), msg.size());
   }
 
  private:
-  void Write(Connection* conn, const char* data, size_t length) {
+  void Write(ConnectionPtr conn, const char* data, size_t length) {
     conn->Write(data, length);
   }
 
@@ -78,7 +78,7 @@ class HTTPConn : public Connection {
   static int chunk_header_cb(http_parser* parser);
   static int chunk_complete_cb(http_parser* parser);
 
-  HTTPMsgHandler* handler_;
+  std::unique_ptr<HTTPMsgHandler> handler_;
   HTTPRequest http_req_;
   std::string tmp_header_k;
 
