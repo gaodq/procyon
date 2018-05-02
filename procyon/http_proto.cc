@@ -99,15 +99,17 @@ int HTTPConn::message_complete_cb(http_parser* parser) {
 }
 
 int HTTPConn::chunk_header_cb(http_parser* parser) {
-  // HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
+  HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
   log_info("chunk_header_cb, content-length: %lu", parser->content_length);
+  conn->handler_->OnChunkBegin(parser->content_length);
 
   return 0;
 }
 
 int HTTPConn::chunk_complete_cb(http_parser* parser) {
-  // HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
+  HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
   log_info("chunk_complete_cb");
+  conn->handler_->OnChunkComplete();
 
   return 0;
 }

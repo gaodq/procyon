@@ -38,6 +38,8 @@ class HTTPMsgHandler {
 
   virtual void OnNewRequest(Connection* conn, const HTTPRequest& msg) {}
   virtual void OnBody(Connection* conn, const char* data, size_t length) {}
+  virtual void OnChunkBegin(size_t length) {}
+  virtual void OnChunkComplete() {}
   virtual void OnComplete(Connection* conn) {}
 
   void WriteHeaders(Connection* conn, http_status status,
