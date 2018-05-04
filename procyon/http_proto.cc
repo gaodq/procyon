@@ -60,6 +60,29 @@ int HTTPConn::request_url_cb(http_parser* parser,
   }
   conn->http_req_.path.assign(at, i);
 
+  i++; // skip ?
+  size_t pos = i;
+  std::string k, v;
+  for (; i < length; i++) {
+    char ch = *(at + i);
+    if (ch == '=') {
+      k.assign(at + pos, i - pos);
+      pos = i + 1;
+    } else if (ch == '&') {
+      v.assign(at + pos, i - pos);
+      pos = i + 1;
+      conn->http_req_.query_params.insert(std::make_pair(k, v));
+    }
+    if (i == length - 1) {
+      if (!k.empty()) {
+        v.assign(at + pos, i - pos + 1);
+      } else {
+        k.assign(at + pos, i - pos + 1);
+      }
+    }
+  }
+  conn->http_req_.query_params.insert(std::make_pair(k, v));
+
   return 0;
 }
 
@@ -80,6 +103,7 @@ int HTTPConn::headers_complete_cb(http_parser* parser) {
   if (conn->state() != Connection::kConnected) {
     return -1;
   }
+  conn->http_req_.content_length = parser->content_length;
   conn->handler_->OnNewRequest(conn->getptr(), conn->http_req_);
 
   return 0;

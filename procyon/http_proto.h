@@ -16,6 +16,7 @@ struct HTTPRequest {
   std::string req_url;
   std::string path;
   std::string content_type;
+  size_t content_length;
   bool require_100continue;
   std::map<std::string, std::string> query_params;
   std::map<std::string, std::string> headers;
