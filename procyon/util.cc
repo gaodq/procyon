@@ -63,7 +63,7 @@ bool AddrToEndPoint(const struct sockaddr_in* cliaddr, EndPoint* ep) {
 }
 
 bool IPPortToEndPoint(const std::string& ip, int port, EndPoint* ep) {
-  return StrToEndPoint(ip + std::to_string(port), ep);
+  return StrToEndPoint(ip + ":" + std::to_string(port), ep);
 }
 
 bool StrToEndPoint(const std::string& ip_port, EndPoint* ep) {

@@ -34,6 +34,8 @@ class Connection : public std::enable_shared_from_this<Connection> {
 
   int fd() const { return conn_fd_; }
   State state() { return state_; }
+  EndPoint local_side() { return local_side_; }
+  EndPoint remote_side() { return remote_side_; }
   ConnectionPtr getptr() { return shared_from_this(); }
 
   std::shared_ptr<EventbaseLoop> event_loop() {

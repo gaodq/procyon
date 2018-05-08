@@ -36,7 +36,6 @@ int HTTPConn::header_value_cb(http_parser* parser,
   std::string& k = conn->tmp_header_k;
   std::string v(at, length);
   std::transform(k.begin(), k.end(), k.begin(), ::tolower);
-  std::transform(v.begin(), v.end(), v.begin(), ::tolower);
   conn->http_req_.headers.insert(std::make_pair(k, v));
   conn->tmp_header_k.clear();
 
@@ -81,7 +80,9 @@ int HTTPConn::request_url_cb(http_parser* parser,
       }
     }
   }
-  conn->http_req_.query_params.insert(std::make_pair(k, v));
+  if (!k.empty()) {
+    conn->http_req_.query_params.insert(std::make_pair(k, v));
+  }
 
   return 0;
 }
@@ -125,7 +126,7 @@ int HTTPConn::message_complete_cb(http_parser* parser) {
 int HTTPConn::chunk_header_cb(http_parser* parser) {
   HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
   log_info("chunk_header_cb, content-length: %lu", parser->content_length);
-  conn->handler_->OnChunkBegin(parser->content_length);
+  conn->handler_->OnChunkBegin(conn->getptr(), parser->content_length);
 
   return 0;
 }
@@ -133,18 +134,17 @@ int HTTPConn::chunk_header_cb(http_parser* parser) {
 int HTTPConn::chunk_complete_cb(http_parser* parser) {
   HTTPConn* conn = reinterpret_cast<HTTPConn*>(parser->data);
   log_info("chunk_complete_cb");
-  conn->handler_->OnChunkComplete();
+  conn->handler_->OnChunkComplete(conn->getptr());
 
   return 0;
 }
 
-void HTTPMsgHandler::WriteHeaders(
+std::future<bool> HTTPMsgHandler::WriteHeaders(
     ConnectionPtr conn, http_status status,
     const std::unordered_map<std::string, std::string>& headers,
     size_t content_length) {
   char buf[256];
   std::string headers_msg;
-  remain_length_ = content_length;
   int len = snprintf(buf, 256, "HTTP/1.1 %d %s\r\nContent-Length: %lu\r\n",
                      http_status_code(status), http_status_name(status),
                      content_length);
@@ -157,18 +157,13 @@ void HTTPMsgHandler::WriteHeaders(
   }
   headers_msg.append("\r\n");
 
-  Write(conn, headers_msg.data(), headers_msg.size());
+  return Write(conn, headers_msg.data(), headers_msg.size());
 }
 
-void HTTPMsgHandler::WriteContent(ConnectionPtr conn,
-                                  const char* data, size_t length) {
-  if (length >= remain_length_) {
-    Write(conn, data, remain_length_);
-    remain_length_ = 0;
-  } else {
-    Write(conn, data, length);
-    remain_length_ -= length;
-  }
+std::future<bool> HTTPMsgHandler::WriteContent(
+    ConnectionPtr conn,
+    const char* data, size_t length) {
+  return Write(conn, data, length);
 }
 
 HTTPConn::HTTPConn(HTTPMsgHandler* handler)

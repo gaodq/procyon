@@ -39,24 +39,26 @@ class HTTPMsgHandler {
 
   virtual void OnNewRequest(ConnectionPtr conn, const HTTPRequest& msg) {}
   virtual void OnBody(ConnectionPtr conn, const char* data, size_t length) {}
-  virtual void OnChunkBegin(size_t length) {}
-  virtual void OnChunkComplete() {}
+  virtual void OnChunkBegin(ConnectionPtr conn, size_t length) {}
+  virtual void OnChunkComplete(ConnectionPtr conn) {}
   virtual void OnComplete(ConnectionPtr conn) {}
 
-  void WriteHeaders(ConnectionPtr conn, http_status status,
-                    const std::unordered_map<std::string, std::string>& headers,
-                    size_t content_length = 0);
-  void WriteContent(ConnectionPtr conn, const char* data, size_t length);
-  void WriteContent(ConnectionPtr conn, const std::string& msg) {
+  static std::future<bool> WriteHeaders(
+      ConnectionPtr conn, http_status status,
+      const std::unordered_map<std::string, std::string>& headers,
+      size_t content_length = 0);
+  static std::future<bool> WriteContent(
+      ConnectionPtr conn, const char* data, size_t length);
+  static std::future<bool> WriteContent(
+      ConnectionPtr conn, const std::string& msg) {
     return WriteContent(conn, msg.data(), msg.size());
   }
 
  private:
-  void Write(ConnectionPtr conn, const char* data, size_t length) {
-    conn->Write(data, length);
+  static std::future<bool> Write(
+    ConnectionPtr conn, const char* data, size_t length) {
+      return conn->Write(data, length);
   }
-
-  size_t remain_length_;
 };
 
 class HTTPConn : public Connection {
