@@ -239,7 +239,7 @@ void Connection::PerformWrite() {
     } else {
       std::string remain;
       if (sended < static_cast<ssize_t>(buf.size())) {
-        remain.assign(buf.data() + sended + 1, buf.size() - sended);
+        remain.assign(buf.data() + sended, buf.size() - sended);
         io_handler_->EnableWrite();
       } else {
         assert(sended == static_cast<ssize_t>(buf.size()));
