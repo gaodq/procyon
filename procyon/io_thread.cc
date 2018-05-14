@@ -20,6 +20,10 @@ int IOThread::Stop() {
   return Thread::Join();
 }
 
+void IOThread::SetThreadName(const std::string& name) {
+  Thread::set_thread_name(name);
+}
+
 IOThreadPool::IOThreadPool(int thread_num)
       : index_(0) {
   thread_num_ = thread_num == 0 ?
@@ -71,6 +75,12 @@ void IOThreadPool::RemoveObserver(std::shared_ptr<Observer> o) {
 
 std::shared_ptr<IOThread> IOThreadPool::NextThread() {
   return threads_[index_++ % thread_num_];
+}
+
+void IOThreadPool::SetThreadName(const std::string& name) {
+  for (int i = 0; i < thread_num_; i++) {
+    threads_[i]->SetThreadName(name + std::to_string(i));
+  }
 }
 
 }  // namespace procyon

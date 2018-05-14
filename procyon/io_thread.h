@@ -18,6 +18,9 @@ class IOThread : public Thread {
   int Start();
   int Stop();
 
+  // Must be set before start
+  void SetThreadName(const std::string& name);
+
  private:
   std::shared_ptr<EventbaseLoop> event_loop_;
 };
@@ -41,6 +44,9 @@ class IOThreadPool {
   void RemoveObserver(std::shared_ptr<Observer> o);
 
   std::shared_ptr<IOThread> NextThread();
+
+  // Must be set before start
+  void SetThreadName(const std::string& name);
 
  private:
   std::vector<std::shared_ptr<Observer>> observers_;
