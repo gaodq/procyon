@@ -18,8 +18,8 @@ class Dispatcher {
   bool Bind();
 
   void OnNewConnection();
-  void OnConnClosed(ConnectionPtr conn);
-  void OnConnError(const ConnectionPtr conn);
+  void OnConnClosed(int conn_fd);
+  void OnConnError(int conn_fd);
 
   struct AcceptHandler : EventHandler {
     explicit AcceptHandler(Dispatcher* d) : dispacher(d) {}

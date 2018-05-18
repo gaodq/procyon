@@ -70,23 +70,29 @@ void Dispatcher::OnNewConnection() {
   conn->InitConn(connfd, t, this, &remote_side, &local_side);
 
   std::lock_guard<std::mutex> lock(conn_mu_);
-  connections_.insert(std::make_pair(connfd, conn));
+  connections_[connfd] = conn;
 }
 
-void Dispatcher::OnConnClosed(ConnectionPtr conn) {
-  // TODO run in loop
-  log_info("Connection: %d closed", conn->fd());
-  if (opts_.close_callback) {
-    opts_.close_callback(conn);
-  }
+void Dispatcher::OnConnClosed(int conn_fd) {
   std::lock_guard<std::mutex> lock(conn_mu_);
-  connections_.erase(conn->fd());
+  if (connections_.count(conn_fd)) {
+    ConnectionPtr conn = connections_[conn_fd];
+    if (opts_.close_callback) {
+      opts_.close_callback(conn);
+    }
+    connections_.erase(conn_fd);
+  }
 }
 
-void Dispatcher::OnConnError(ConnectionPtr conn) {
-  log_info("Connection: %d error", conn->fd());
-  if (opts_.error_callback) {
-    opts_.error_callback(conn);
+void Dispatcher::OnConnError(int conn_fd) {
+  log_info("Connection: %d error", conn_fd);
+  std::lock_guard<std::mutex> lock(conn_mu_);
+  if (connections_.count(conn_fd)) {
+    ConnectionPtr conn = connections_[conn_fd];
+    if (opts_.error_callback) {
+      opts_.error_callback(conn);
+    }
+    connections_.erase(conn_fd);
   }
 }
 

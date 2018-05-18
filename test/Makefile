@@ -20,13 +20,13 @@ GTEST_DIR = gtest
 GMOCK_DIR = gmock
 
 # Where to find user code.
-PINK_DIR = ..
-PINK_LIBRARY=$(PINK_DIR)/output/lib/libpink.a
-PINK_INCLUDE_DIR=$(PINK_DIR)/output/include
-PINK_TESTS_SRC = $(PINK_DIR)/pink/test
+PROCYON_DIR = ..
+PROCYON_LIBRARY=$(PROCYON_DIR)/output/lib/libprocyon.a
+PROCYON_INCLUDE_DIR=$(PROCYON_DIR)/output/include
+PROCYON_TEST_DIR = $(PROCYON_DIR)/procyon/test
 
-LDFLAGS = $(PINK_LIBRARY) $(SLASH_LIBRARY) -lpthread
-EXTRA_CXXFLAGS = -I$(PINK_INCLUDE_DIR)
+LDFLAGS = $(PROCYON_LIBRARY) $(SLASH_LIBRARY) -lpthread
+EXTRA_CXXFLAGS = -I$(PROCYON_INCLUDE_DIR)
 
 # Flags passed to the preprocessor.
 # Set Google Test and Google Mock's header directories as system
@@ -101,8 +101,8 @@ gmock_main.a : gmock-all.o gtest-all.o gmock_main.o
 
 # Builds pink tests.
 
-bg_thread_test: $(PINK_TESTS_SRC)/bg_thread_test.cc gmock_main.a
+bg_thread_test: $(PROCYON_TEST_DIR)/bg_thread_test.cc gmock_main.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(EXTRA_CXXFLAGS) $^ $(LDFLAGS) -o $@
 
-iobuf_test: $(PINK_TESTS_SRC)/iobuf_test.cc gmock_main.a
+iobuf_test: $(PROCYON_TEST_DIR)/iobuf_test.cc gmock_main.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(EXTRA_CXXFLAGS) $^ $(LDFLAGS) -o $@

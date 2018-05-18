@@ -42,30 +42,33 @@ class CustomHandler : public procyon::HTTPMsgHandler {
       std::cout << "   " << item.first << ": " << item.second << "\n";
     }
 
+    total_ = 0;
   }
 
   virtual void OnBody(procyon::ConnectionPtr conn,
                       const char* data, size_t length) override {
-    if (status_ == -1) {
-      return;
-    }
-    std::cout << "length: " << length << std::endl;
-    std::string content("error");
-    WriteHeaders(conn, HTTP_STATUS_BAD_REQUEST, headers_, content.size());
-    WriteContent(conn, content);
-    status_ = -1;
+    // if (status_ == -1) {
+    //   return;
+    // }
+    // std::cout << "length: " << length << std::endl;
+    // std::string content("error");
+    // WriteHeaders(conn, HTTP_STATUS_BAD_REQUEST, headers_, content.size());
+    // WriteContent(conn, content);
+    // status_ = -1;
+    total_ += length;
   }
 
   virtual void OnComplete(procyon::ConnectionPtr conn) override {
-    std::cout << "OnComplete" << std::endl;
+    std::cout << "OnComplete, received: " << total_ << std::endl;
     std::string content("nihaoa");
     WriteHeaders(conn, HTTP_STATUS_OK, headers_, content.size());
     WriteContent(conn, content);
   }
 
  private:
-    std::unordered_map<std::string, std::string> headers_;
-    int status_;
+  std::unordered_map<std::string, std::string> headers_;
+  int status_;
+  size_t total_;
 };
 
 class MyConnFactory : public procyon::ConnectionFactory {

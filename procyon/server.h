@@ -17,6 +17,7 @@ class Server {
   }
 
   bool Start();
+  void Stop();
 
  private:
   const ServerOptions opts_;

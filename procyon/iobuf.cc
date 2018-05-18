@@ -6,10 +6,13 @@
 
 namespace procyon {
 
+static std::atomic<int> g_counter;
+
 Block::Block()
       : next_(this),
         prev_(this) {
   buffer_ = static_cast<char*>(malloc(kDefaultBufferSize));
+  g_counter.fetch_add(kDefaultBufferSize);
   data_ = buffer_;
   length_ = 0;
   capacity_ = kDefaultBufferSize - sizeof(SharedInfo);
@@ -46,6 +49,8 @@ void Block::Unref() {
     return;
   }
   free(buffer_);
+  int ret = g_counter.fetch_sub(kDefaultBufferSize);
+  printf("-------- Remain buffer: %d\n", ret);
 }
 
 void Block::TrimStart(size_t amount) {

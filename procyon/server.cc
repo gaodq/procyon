@@ -29,4 +29,9 @@ bool Server::Start() {
   return true;
 }
 
+void Server::Stop() {
+  opts_.accept_thread->Stop();
+  opts_.worker_threads->Stop();
+}
+
 }  // namespace procyon

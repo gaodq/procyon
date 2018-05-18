@@ -31,6 +31,7 @@ struct Connection::IOHandler : public EventHandler {
       conn->PerformWrite();
       conn->PerformRead();
     } else {
+      log_warn("Connection %d closed on error", conn->fd());
       conn->Close();
     }
   }
@@ -183,6 +184,7 @@ void Connection::PerformRead() {
     GetReadBuffer(&buffer, &len);
     ssize_t rn = read(conn_fd_, buffer, len);
     if (rn == 0) {
+      log_warn("Connection %d closed by peer", fd());
       Close();
       return;
     }
@@ -190,7 +192,8 @@ void Connection::PerformRead() {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         return;
       }
-      dispatcher_->OnConnError(shared_from_this());
+      log_warn();
+      dispatcher_->OnConnError(conn_fd_);
       break;
     } else if (rn > 0) {
       OnDataAvailable(rn);
@@ -234,6 +237,7 @@ void Connection::PerformWrite() {
     if (sended < 0) {
       // Error
       res.set_value(false);
+      log_warn("Connection %d closed while PerformWrite error", fd());
       Close();
       return;
     } else {
@@ -274,6 +278,7 @@ std::future<bool> Connection::Write(const void* data, size_t size) {
     if (sended < 0) {
       // Error
       res.set_value(false);
+      log_warn("Connection %d closed while Write error", fd());
       Close();
     } else if (sended < static_cast<ssize_t>(size)) {
       pending_output_mu_.lock();
@@ -302,8 +307,9 @@ void Connection::Close(/* CLOSEREASON reason */) {
       return;
     }
     state_ = kNoConnect;
-    dispatcher_->OnConnClosed(shared_from_this());
+    dispatcher_->OnConnClosed(conn_fd_);
     close(conn_fd_);
+    conn_fd_ = -1;
   });
 }
 

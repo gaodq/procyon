@@ -24,13 +24,6 @@ TEST(IOBufTest, SingleBlock) {
   ASSERT_EQ(buf->TEST_BlockCount(), 1);
   ASSERT_EQ(buf->ToString(), std::string(test_str));
 
-  auto clone = buf->Split(5);
-  // // auto pop = buf->Pop();
-  // ASSERT_EQ(pop->TEST_Refcount(), 2);
-
-  // clone.reset();
-  // ASSERT_EQ(pop->TEST_Refcount(), 1);
-
   delete buf;
 }
 
@@ -51,34 +44,54 @@ TEST(IOBufTest, MultiBlocks) {
   procyon::IOBuf buf;
   auto mem = buf.PreAllocate();
   ASSERT_EQ(mem.second, 16380);
-  buf.PostAllocate(mem.second);
-
-  mem = buf.PreAllocate();
   *(char*)mem.first = 'c';
-  *((char*)mem.first + 16379) = 'a';
-  ASSERT_EQ(mem.second, 16380);
+  *((char*)mem.first + mem.second - 1) = 'a';
   buf.PostAllocate(mem.second);
-  ASSERT_EQ(buf.TEST_BlockCount(), 2);
 
-  mem = buf.PreAllocate();
-  ASSERT_EQ(mem.second, 16380);
-  buf.PostAllocate(mem.second);
-  ASSERT_EQ(buf.TEST_BlockCount(), 3);
+  // mem = buf.PreAllocate();
+  // *(char*)mem.first = 'c';
+  // *((char*)mem.first + mem.second - 1) = 'a';
+  // ASSERT_EQ(mem.second, 16380);
+  // buf.PostAllocate(mem.second);
+  // ASSERT_EQ(buf.TEST_BlockCount(), 2);
 
-  buf.TrimStart(16000);
-  buf.TrimStart(380);
-  ASSERT_EQ(buf.TEST_BlockCount(), 2);
-  ASSERT_EQ(buf.ByteAt(0), 'c');
+  // mem = buf.PreAllocate();
+  // ASSERT_EQ(mem.second, 16380);
+  // buf.PostAllocate(mem.second);
+  // ASSERT_EQ(buf.TEST_BlockCount(), 3);
 
-  buf.Split(380);
-  buf.Split(15999);
-  ASSERT_EQ(buf.ByteAt(0), 'a');
+  // buf.TrimStart(16000);
+  // buf.TrimStart(380);
+  // ASSERT_EQ(buf.TEST_BlockCount(), 2);
+  // ASSERT_EQ(buf.ByteAt(0), 'c');
 
-  mem = buf.PreAllocate();
-  buf.PostAllocate(mem.second);
-  *((char*)mem.first + 391) = 'b';
+  // buf.Split(380);
+  // buf.Split(15999);
+  // ASSERT_EQ(buf.ByteAt(0), 'a');
 
-  buf.TrimStart(16380 + 1 + 390);
-  ASSERT_EQ(buf.ByteAt(1), 'b');
-  ASSERT_EQ(buf.TEST_BlockCount(), 1);
+  // mem = buf.PreAllocate();
+  // buf.PostAllocate(mem.second);
+  // *((char*)mem.first + 391) = 'b';
+
+  // buf.TrimStart(16380 + 1 + 390);
+  // ASSERT_EQ(buf.ByteAt(1), 'b');
+  // ASSERT_EQ(buf.TEST_BlockCount(), 1);
+}
+
+TEST(IOBufTest, Roll) {
+  procyon::IOBuf buf;
+  int count = 1000;
+  while (count--) {
+    auto mem = buf.PreAllocate();
+    buf.PostAllocate(mem.second / 2);
+    ASSERT_EQ(buf.length(), mem.second / 2);
+
+    size_t remain = mem.second / 2;
+    while (remain) {
+      size_t min_sz = std::min(remain, static_cast<size_t>(1024));
+      buf.TrimStart(min_sz);
+      remain -= min_sz;
+    }
+    ASSERT_EQ(buf.length(), 0);
+  }
 }

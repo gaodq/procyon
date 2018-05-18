@@ -1,6 +1,7 @@
 #include "procyon/http_proto.h"
 #include "procyon/xdebug.h"
 #include <algorithm>
+#include <sstream>
 
 namespace procyon {
 
@@ -59,29 +60,26 @@ int HTTPConn::request_url_cb(http_parser* parser,
   }
   conn->http_req_.path.assign(at, i);
 
-  i++; // skip ?
-  size_t pos = i;
-  std::string k, v;
-  for (; i < length; i++) {
-    char ch = *(at + i);
-    if (ch == '=') {
-      k.assign(at + pos, i - pos);
-      pos = i + 1;
-    } else if (ch == '&') {
-      v.assign(at + pos, i - pos);
-      pos = i + 1;
+  if (i < length) {
+    std::string param_str(at + i + 1, length - i - 1);
+    std::vector<std::string> elems;
+    std::stringstream ss(param_str);
+    std::string item;
+    while (std::getline(ss, item, '&')) {
+      if (!item.empty())
+        elems.push_back(item);
+    }
+    for (const auto& e : elems) {
+      size_t pos = e.find('=');
+      std::string k, v;
+      if (pos == std::string::npos) {
+        k = e;
+      } else {
+        k = e.substr(0, pos);
+        v = e.substr(pos + 1);
+      }
       conn->http_req_.query_params.insert(std::make_pair(k, v));
     }
-    if (i == length - 1) {
-      if (!k.empty()) {
-        v.assign(at + pos, i - pos + 1);
-      } else {
-        k.assign(at + pos, i - pos + 1);
-      }
-    }
-  }
-  if (!k.empty()) {
-    conn->http_req_.query_params.insert(std::make_pair(k, v));
   }
 
   return 0;
@@ -93,7 +91,7 @@ int HTTPConn::body_cb(http_parser* parser,
   if (conn->state() != Connection::kConnected) {
     return -1;
   }
-  log_info("body_cb");
+  log_info("body_cb, length: %lu", length);
   conn->handler_->OnBody(conn->getptr(), at, length);
 
   return 0;
