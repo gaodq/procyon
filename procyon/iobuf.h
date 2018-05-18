@@ -44,8 +44,7 @@ class Block {
   Block(char* buf, char* data, size_t len, size_t cap);
 
   SharedInfo* shared_info() {
-    return reinterpret_cast<SharedInfo*>(
-      buffer_ + capacity_ - sizeof(SharedInfo));
+    return reinterpret_cast<SharedInfo*>(buffer_ + capacity_);
   }
 
   char* buffer_;
