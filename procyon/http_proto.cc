@@ -37,6 +37,15 @@ int HTTPConn::header_value_cb(http_parser* parser,
   std::string& k = conn->tmp_header_k;
   std::string v(at, length);
   std::transform(k.begin(), k.end(), k.begin(), ::tolower);
+  if (k == "host") {
+    // Format path
+    const std::string& path = conn->http_req_.path;
+    size_t pos = path.find(v);
+    size_t path_pos = 7 + v.size();  // http://www.xxx.xxx/path_/to
+    if (pos != std::string::npos && path.size() > path_pos) {
+      conn->http_req_.path.assign(path.substr(path_pos));
+    }
+  }
   conn->http_req_.headers.insert(std::make_pair(k, v));
   conn->tmp_header_k.clear();
 

@@ -26,7 +26,7 @@ class Connection : public std::enable_shared_from_this<Connection> {
   struct IOHandler;
 
   Connection();
-  virtual ~Connection() { Close(); }
+  virtual ~Connection() { CloseImpl(); }
 
   void InitConn(int conn_fd, std::shared_ptr<IOThread> io_thread,
                 Dispatcher* dispacher, const EndPoint* remote_side,
@@ -69,6 +69,7 @@ class Connection : public std::enable_shared_from_this<Connection> {
   void PerformWrite();
 
   ssize_t WriteImpl(const char* data, size_t size);
+  void CloseImpl();
 
   int conn_fd_;
   std::chrono::time_point<std::chrono::system_clock> last_active_time_;

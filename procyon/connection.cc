@@ -32,7 +32,7 @@ struct Connection::IOHandler : public EventHandler {
       conn->PerformRead();
     } else {
       log_warn("Connection %d closed on error", conn->fd());
-      conn->Close();
+      conn->CloseImpl();
     }
   }
 
@@ -57,125 +57,6 @@ void Connection::InitConn(int conn_fd, std::shared_ptr<IOThread> io_thread,
   state_ = kConnected;
 }
 
-/* TODO Support Client
-bool Connection::Connect(const ClientOptions& opts,
-                         const EndPoint* remote_side,
-                         const EndPoint* local_side) {
-  int rv;
-  char cport[6];
-  struct addrinfo hints, *servinfo, *p;
-  snprintf(cport, sizeof(cport), "%d", remote_side->port);
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_STREAM;
-
-  // Not support IPv6
-  std::string ip_str;
-  util::IPToStr(remote_side->ip, &ip_str);
-  if ((rv = getaddrinfo(ip_str.c_str(), cport, &hints, &servinfo)) != 0) {
-    log_err("getaddrinfo error: %s", strerror(errno));
-    return false;
-  }
-  for (p = servinfo; p != nullptr; p = p->ai_next) {
-    if ((conn_fd_ = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-      continue;
-    }
-
-    // bind if needed
-    if (local_side != nullptr) {
-      struct sockaddr_in localaddr;
-      localaddr.sin_family = AF_INET;
-      localaddr.sin_addr = local_side->ip;
-      localaddr.sin_port = local_side->port;  // Any local port will do
-      if (bind(conn_fd_, (struct sockaddr *)&localaddr, sizeof(localaddr)) != 0) {
-        log_err("bind error: %s", strerror(errno));
-        return false;
-      }
-    }
-
-    if (util::SetNonblocking(conn_fd_) != 0) {
-      log_err("SetNonblocking error: %s", strerror(errno));
-      return false;
-    }
-
-    if (connect(conn_fd_, p->ai_addr, p->ai_addrlen) == -1) {
-      if (errno == EHOSTUNREACH) {
-        close(conn_fd_);
-        continue;
-      } else if (errno == EINPROGRESS ||
-                 errno == EAGAIN ||
-                 errno == EWOULDBLOCK) {
-        struct pollfd wfd[1];
-
-        wfd[0].fd = conn_fd_;
-        wfd[0].events = POLLOUT;
-
-        int res;
-        if ((res = poll(wfd, 1, opts.connect_timeout_ms)) == -1) {
-          close(conn_fd_);
-          freeaddrinfo(servinfo);
-          log_err("EHOSTUNREACH connect poll error: %s", strerror(errno));
-          return false;
-        } else if (res == 0) {
-          close(conn_fd_);
-          freeaddrinfo(servinfo);
-          log_err("connect timeout: %s", strerror(errno));
-          return false;
-        }
-        int val = 0;
-        socklen_t lon = sizeof(int);
-
-        if (getsockopt(conn_fd_, SOL_SOCKET, SO_ERROR, &val, &lon) == -1) {
-          close(conn_fd_);
-          freeaddrinfo(servinfo);
-          log_err("EHOSTUNREACH connect host getsockopt error: %s", strerror(errno));
-          return false;
-        }
-
-        if (val) {
-          close(conn_fd_);
-          freeaddrinfo(servinfo);
-          log_err("EHOSTUNREACH connect host error: %s", strerror(errno));
-          return false;
-        }
-      } else {
-        close(conn_fd_);
-        freeaddrinfo(servinfo);
-          log_err("EHOSTUNREACH cannot reach target host: %s", strerror(errno));
-        return false;
-      }
-    }
-
-    struct sockaddr_in laddr;
-    socklen_t llen = sizeof(laddr);
-    getsockname(conn_fd_, (struct sockaddr*) &laddr, &llen);
-    std::string lip(inet_ntoa(laddr.sin_addr));
-    int lport = ntohs(laddr.sin_port);
-    if (ip_str == lip && remote_side->port == lport) {
-      log_err("EHOSTUNREACH same ip port");
-      return false;
-    }
-
-    // Set block
-    int flags = fcntl(conn_fd_, F_GETFL, 0);
-    fcntl(conn_fd_, F_SETFL, flags & ~O_NONBLOCK);
-    freeaddrinfo(servinfo);
-
-    // connect ok
-    remote_side_ = *remote_side;
-    last_active_time_ = std::chrono::system_clock::now();
-    return true;
-  }
-  if (p == nullptr) {
-    log_err("Can't create socket: %s", strerror(errno));
-    return false;
-  }
-  freeaddrinfo(servinfo);
-  freeaddrinfo(p);
-  return false;
-}
-*/
-
 void Connection::PerformRead() {
   last_active_time_ = std::chrono::system_clock::now();
   while (true) {
@@ -185,8 +66,7 @@ void Connection::PerformRead() {
     ssize_t rn = read(conn_fd_, buffer, len);
     if (rn == 0) {
       log_warn("Connection %d closed by peer", fd());
-      Close();
-      return;
+      CloseImpl();
     }
     if (rn < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -238,8 +118,7 @@ void Connection::PerformWrite() {
       // Error
       res.set_value(false);
       log_warn("Connection %d closed while PerformWrite error", fd());
-      Close();
-      return;
+      CloseImpl();
     } else {
       std::string remain;
       if (sended < static_cast<ssize_t>(buf.size())) {
@@ -279,7 +158,7 @@ std::future<bool> Connection::Write(const void* data, size_t size) {
       // Error
       res.set_value(false);
       log_warn("Connection %d closed while Write error", fd());
-      Close();
+      CloseImpl();
     } else if (sended < static_cast<ssize_t>(size)) {
       pending_output_mu_.lock();
       pending_output_.emplace_back(
@@ -301,16 +180,18 @@ int Connection::IdleSeconds() {
   return diff.count();
 }
 
+void Connection::CloseImpl() {
+  if (state_ != kConnected) {
+    return;
+  }
+  state_ = kNoConnect;
+  io_handler_->UnRegisterHandler();
+  close(conn_fd_);
+  dispatcher_->OnConnClosed(conn_fd_);
+}
+
 void Connection::Close(/* CLOSEREASON reason */) {
-  event_loop()->RunInLoop([this](){
-    if (state_ != kConnected) {
-      return;
-    }
-    state_ = kNoConnect;
-    dispatcher_->OnConnClosed(conn_fd_);
-    close(conn_fd_);
-    conn_fd_ = -1;
-  });
+  event_loop()->RunInLoop([this](){ CloseImpl(); });
 }
 
 }  // namespace procyon

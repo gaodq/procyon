@@ -16,14 +16,12 @@ bool EventHandler::RegisterHandler(std::shared_ptr<EventbaseLoop> l, int fd) {
   return EnableRead();
 }
 
-bool EventHandler::UnRegisterHandler() {
+void EventHandler::UnRegisterHandler() {
   int ret = epoll_ctl(event_loop_->epfd(), EPOLL_CTL_DEL, fd_, nullptr);
   if (ret < 0) {
     log_warn("Failed delete fd: %d event from epfd_:%d",
              fd_, event_loop_->epfd());
-    return false;
   }
-  return true;
 }
 
 bool EventHandler::EnableRead() {
@@ -69,14 +67,36 @@ EventbaseLoop::EventbaseLoop()
     log_err("epoll create fail");
     exit(1);
   }
+
+  if (pipe(exit_fd_) < 0) {
+    log_err("pipe create fail");
+    exit(1);
+  }
+
+  struct epoll_event event;
+  event.events = EPOLLIN;
+  event.data.fd = exit_fd_[0];
+
+  int ret = epoll_ctl(epfd_, EPOLL_CTL_ADD, exit_fd_[0], &event);
+  if (ret < 0) {
+    log_warn("Failed add fd: %d event to epfd_:%d", exit_fd_[0], epfd_);
+    exit(1);
+  }
 }
 
 EventbaseLoop::~EventbaseLoop() {
   close(epfd_);
+  close(exit_fd_[0]);
+  close(exit_fd_[1]);
 }
 
 const int kPinkMaxClients = 10240;
 const int kPinkEpollTimeout = 1000;
+
+void EventbaseLoop::Stop() {
+  should_stop_ = true;
+  write(exit_fd_[1], "", 1);
+}
 
 void EventbaseLoop::run() {
   struct epoll_event e[kPinkMaxClients];
@@ -104,6 +124,10 @@ void EventbaseLoop::run() {
     }
 
     for (int i = 0; i < n; i++) {
+      if (e[i].data.fd == exit_fd_[0]) {
+        should_stop_ = true;
+        break;
+      }
       EventHandler* handler = reinterpret_cast<EventHandler*>(e[i].data.ptr);
       handler->HandleReady(e[i].events);
     }
