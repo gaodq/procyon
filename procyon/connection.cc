@@ -20,7 +20,7 @@
 namespace procyon {
 
 struct Connection::IOHandler : public EventHandler {
-  explicit IOHandler(Connection* c) : conn(c) {}
+  explicit IOHandler(ConnectionPtr c) : conn(c) {}
 
   void HandleReady(uint32_t events) override {
     if (events == kRead) {
@@ -36,13 +36,12 @@ struct Connection::IOHandler : public EventHandler {
     }
   }
 
-  Connection* conn;
+  ConnectionPtr conn;
 };
 
 Connection::Connection()
     : state_(kNoConnect),
-      last_active_time_(std::chrono::system_clock::now()),
-      io_handler_(new IOHandler(this)) {
+      last_active_time_(std::chrono::system_clock::now()) {
 }
 
 void Connection::InitConn(int conn_fd, std::shared_ptr<IOThread> io_thread,
@@ -53,6 +52,7 @@ void Connection::InitConn(int conn_fd, std::shared_ptr<IOThread> io_thread,
   dispatcher_ = dispacher;
   remote_side_ = *remote_side;
   local_side_ = *local_side;
+  io_handler_.reset(new IOHandler(shared_from_this()));
   io_handler_->RegisterHandler(event_loop(), conn_fd_);
   state_ = kConnected;
 }
@@ -67,12 +67,13 @@ void Connection::PerformRead() {
     if (rn == 0) {
       log_warn("Connection %d closed by peer", fd());
       CloseImpl();
+      return;
     }
     if (rn < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         return;
       }
-      log_warn();
+      log_warn("Connection %d read error", fd());
       dispatcher_->OnConnError(conn_fd_);
       break;
     } else if (rn > 0) {
@@ -102,6 +103,7 @@ ssize_t Connection::WriteImpl(const char* data, size_t size) {
 }
 
 void Connection::PerformWrite() {
+  assert(io_handler_);
   last_active_time_ = std::chrono::system_clock::now();
 
   io_handler_->DisableWrite();
@@ -119,6 +121,7 @@ void Connection::PerformWrite() {
       res.set_value(false);
       log_warn("Connection %d closed while PerformWrite error", fd());
       CloseImpl();
+      return;
     } else {
       std::string remain;
       if (sended < static_cast<ssize_t>(buf.size())) {
@@ -181,6 +184,7 @@ int Connection::IdleSeconds() {
 }
 
 void Connection::CloseImpl() {
+  assert(io_handler_);
   if (state_ != kConnected) {
     return;
   }
