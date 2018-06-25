@@ -5,7 +5,6 @@
 #include <future>
 #include <chrono>
 
-#include "procyon/options.h"
 #include "procyon/endpoint.h"
 #include "procyon/io_thread.h"
 
@@ -46,12 +45,6 @@ class Connection : public std::enable_shared_from_this<Connection> {
   virtual void OnDataAvailable(size_t size) = 0;
 
   std::future<bool> Write(const void* data, size_t size);
-
-  /* TODO Support Client
-  bool Connect(const ClientOptions& opts,
-               const EndPoint* remote_side,
-               const EndPoint* local_side = nullptr);
-  */
 
   int IdleSeconds();
 

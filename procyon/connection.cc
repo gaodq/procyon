@@ -148,6 +148,11 @@ std::future<bool> Connection::Write(const void* data, size_t size) {
   std::promise<bool> res;
   std::future<bool> wait_complete = res.get_future();
 
+  if (state_ != kConnected) {
+    res.set_value(false);
+    return wait_complete;
+  }
+
   std::unique_lock<std::mutex> lk(pending_output_mu_);
   if (!pending_output_.empty()) {
     pending_output_.emplace_back(
@@ -188,7 +193,18 @@ void Connection::CloseImpl() {
   if (state_ != kConnected) {
     return;
   }
+
   state_ = kNoConnect;
+
+  {
+  std::unique_lock<std::mutex> lk(pending_output_mu_);
+  while (!pending_output_.empty()) {
+    WriteRequest& req = pending_output_.front();
+    req.res.set_value(false);
+    pending_output_.pop_front();
+  }
+  }
+
   io_handler_->UnRegisterHandler();
   close(conn_fd_);
   dispatcher_->OnConnClosed(conn_fd_);

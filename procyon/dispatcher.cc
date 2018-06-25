@@ -69,8 +69,14 @@ void Dispatcher::OnNewConnection() {
   util::AddrToEndPoint(&cliaddr, &remote_side);
   conn->InitConn(connfd, t, this, &remote_side, &local_side);
 
+  {
   std::lock_guard<std::mutex> lock(conn_mu_);
   connections_[connfd] = conn;
+  }
+
+  if (opts_.newconn_callback) {
+    opts_.newconn_callback(conn);
+  }
 }
 
 void Dispatcher::OnConnClosed(int conn_fd) {
