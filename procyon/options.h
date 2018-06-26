@@ -34,10 +34,21 @@ struct ServerOptions {
 };
 
 struct ClientOptions {
+  std::string remote_ip = "0.0.0.0";
+  int remote_port = 8089;
 
-  int send_timeout_ms;
-  int recv_timeout_ms;
-  int connect_timeout_ms;
+  std::string local_ip;
+
+  std::shared_ptr<ConnectionFactory> conn_factory;
+
+  std::shared_ptr<IOThread> io_thread =
+    std::shared_ptr<IOThread>(new IOThread);
+
+  std::function<void(ConnectionPtr)> error_callback;
+
+  std::function<void(ConnectionPtr)> close_callback;
+
+  int connect_timeout_ms = 1000;
 };
 
 }  // namespace procyon

@@ -67,7 +67,7 @@ void Dispatcher::OnNewConnection() {
   EndPoint remote_side, local_side;
   util::IPPortToEndPoint(opts_.listen_ip, opts_.port, &local_side);
   util::AddrToEndPoint(&cliaddr, &remote_side);
-  conn->InitConn(connfd, t, this, &remote_side, &local_side);
+  conn->InitConn(connfd, t, this, remote_side, local_side);
 
   {
   std::lock_guard<std::mutex> lock(conn_mu_);

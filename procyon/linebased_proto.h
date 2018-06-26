@@ -11,10 +11,13 @@ class LineMsgHandler {
  public:
   virtual ~LineMsgHandler() {}
 
-  virtual void HandleNewLine(ConnectionPtr conn, std::unique_ptr<IOBuf>&& line) {}
+  virtual void HandleNewLine(
+      ConnectionPtr conn, std::unique_ptr<IOBuf>&& line) {
+  }
 
-  void Write(ConnectionPtr conn, const std::string& msg) {
-    conn->Write(msg.data(), msg.size());
+  static std::future<bool> WriteLine(
+      ConnectionPtr conn, const std::string& msg) {
+    return conn->Write(msg.data(), msg.size());
   }
 };
 

@@ -15,6 +15,13 @@ class Connection;
 
 typedef std::shared_ptr<Connection> ConnectionPtr;
 
+struct ConnectionManager {
+  virtual ~ConnectionManager() = default;
+
+  virtual void OnConnClosed(int conn_fd) = 0;
+  virtual void OnConnError(int conn_fd) = 0;
+};
+
 class Connection : public std::enable_shared_from_this<Connection> {
  public:
   enum State {
@@ -27,19 +34,18 @@ class Connection : public std::enable_shared_from_this<Connection> {
   Connection();
   virtual ~Connection() { CloseImpl(); }
 
-  void InitConn(int conn_fd, std::shared_ptr<IOThread> io_thread,
-                Dispatcher* dispacher, const EndPoint* remote_side,
-                const EndPoint* local_side);
+  void InitConn(
+    int conn_fd,
+    std::shared_ptr<IOThread> io_thread,
+    ConnectionManager* manager,
+    const EndPoint& remote_side,
+    const EndPoint& local_side);
 
   int fd() const { return conn_fd_; }
   State state() { return state_; }
   EndPoint local_side() { return local_side_; }
   EndPoint remote_side() { return remote_side_; }
   ConnectionPtr getptr() { return shared_from_this(); }
-
-  std::shared_ptr<EventbaseLoop> event_loop() {
-    return io_thread_->event_loop();
-  }
 
   virtual void GetReadBuffer(void** buffer, size_t* len) = 0;
   virtual void OnDataAvailable(size_t size) = 0;
@@ -66,7 +72,7 @@ class Connection : public std::enable_shared_from_this<Connection> {
 
   int conn_fd_;
   std::chrono::time_point<std::chrono::system_clock> last_active_time_;
-  std::shared_ptr<IOThread> io_thread_;
+  std::shared_ptr<EventbaseLoop> event_loop_;
   std::shared_ptr<IOHandler> io_handler_;
 
   struct WriteRequest {
@@ -76,13 +82,13 @@ class Connection : public std::enable_shared_from_this<Connection> {
   std::mutex pending_output_mu_;
   std::list<WriteRequest> pending_output_; // TODO lock free
 
-  Dispatcher* dispatcher_;
+  ConnectionManager* conn_manager_;
 };
 
 class ConnectionFactory {
  public:
   virtual ~ConnectionFactory() {}
-  virtual std::shared_ptr<Connection> NewConnection() = 0;
+  virtual ConnectionPtr NewConnection() = 0;
 };
 
 }  // namespace procyon

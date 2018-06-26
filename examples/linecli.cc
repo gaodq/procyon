@@ -1,23 +1,15 @@
-#include "procyon/server.h"
-#include "procyon/connection.h"
-#include "procyon/linebased_proto.h"
-#include "procyon/io_thread.h"
-
 #include <unistd.h>
 #include <iostream>
-#include <memory>
-#include <atomic>
-#include <thread>
-#include <chrono>
+
+#include "procyon/client.h"
+#include "procyon/options.h"
+#include "procyon/linebased_proto.h"
 
 class CustomHandler : public procyon::LineMsgHandler {
  public:
   void HandleNewLine(procyon::ConnectionPtr conn,
                      std::unique_ptr<procyon::IOBuf>&& line) override {
-    std::string msg = line->ToString();
-    std::cout << "Server receive: " << msg << std::endl;
-    msg.append("\r\n");
-    WriteLine(conn, msg);
+    std::cout << "Client receive: " << line->ToString() << std::endl;
   }
 };
 
@@ -29,19 +21,21 @@ class MyConnFactory : public procyon::ConnectionFactory {
 };
 
 int main() {
-  procyon::ServerOptions opts;
-  opts.port = 8088;
+  procyon::ClientOptions opts;
+  opts.remote_ip = "127.0.0.1";
+  opts.remote_port = 8088;
   opts.conn_factory = std::make_shared<MyConnFactory>();
-  opts.worker_threads = std::make_shared<procyon::IOThreadPool>(24);
 
-  procyon::Server server(opts);
-  bool res = server.Start();
+  opts.io_thread->Start();
+  procyon::Client client(opts);
+  bool res = client.Connect();
   if (!res) {
     return -1;
   }
 
+  std::string msg("hello\r\n");
   while (true) {
-    sleep(1);
+    procyon::LineMsgHandler::WriteLine(client.conn(), msg);
   }
 
   return 0;

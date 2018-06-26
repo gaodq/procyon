@@ -27,7 +27,7 @@ void* Thread::ThreadMain(void *arg) {
 int Thread::Start() {
   if (state_ != kUninitialized) {
     log_warn("Thread has started");
-    return -1;
+    return 0;
   }
   if (pthread_create(&thread_id_, nullptr, ThreadMain, (void *)this) != 0) {
     log_err("pthread_create failed!");

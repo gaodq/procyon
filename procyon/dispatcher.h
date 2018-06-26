@@ -11,15 +11,15 @@
 
 namespace procyon {
 
-class Dispatcher {
+class Dispatcher : public ConnectionManager {
  public:
   explicit Dispatcher(const ServerOptions& options);
 
   bool Bind();
 
   void OnNewConnection();
-  void OnConnClosed(int conn_fd);
-  void OnConnError(int conn_fd);
+  void OnConnClosed(int conn_fd) override;
+  void OnConnError(int conn_fd) override;
 
   struct AcceptHandler : EventHandler {
     explicit AcceptHandler(Dispatcher* d) : dispacher(d) {}

@@ -4,13 +4,6 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <poll.h>
-#include <fcntl.h>
 
 #include "procyon/dispatcher.h"
 #include "procyon/eventbase_loop.h"
@@ -44,16 +37,19 @@ Connection::Connection()
       last_active_time_(std::chrono::system_clock::now()) {
 }
 
-void Connection::InitConn(int conn_fd, std::shared_ptr<IOThread> io_thread,
-                          Dispatcher* dispacher, const EndPoint* remote_side,
-                          const EndPoint* local_side) {
+void Connection::InitConn(
+    int conn_fd,
+    std::shared_ptr<IOThread> io_thread,
+    ConnectionManager* manager,
+    const EndPoint& remote_side,
+    const EndPoint& local_side) {
   conn_fd_ = conn_fd;
-  io_thread_ = io_thread;
-  dispatcher_ = dispacher;
-  remote_side_ = *remote_side;
-  local_side_ = *local_side;
+  event_loop_ = io_thread->event_loop();
+  conn_manager_ = manager;
+  remote_side_ = remote_side;
+  local_side_ = local_side;
   io_handler_.reset(new IOHandler(shared_from_this()));
-  io_handler_->RegisterHandler(event_loop(), conn_fd_);
+  io_handler_->RegisterHandler(event_loop_, conn_fd_);
   state_ = kConnected;
 }
 
@@ -74,7 +70,7 @@ void Connection::PerformRead() {
         return;
       }
       log_warn("Connection %d read error", fd());
-      dispatcher_->OnConnError(conn_fd_);
+      conn_manager_->OnConnError(conn_fd_);
       break;
     } else if (rn > 0) {
       OnDataAvailable(rn);
@@ -207,11 +203,11 @@ void Connection::CloseImpl() {
 
   io_handler_->UnRegisterHandler();
   close(conn_fd_);
-  dispatcher_->OnConnClosed(conn_fd_);
+  conn_manager_->OnConnClosed(conn_fd_);
 }
 
 void Connection::Close(/* CLOSEREASON reason */) {
-  event_loop()->RunInLoop([this](){ CloseImpl(); });
+  event_loop_->RunInLoop([this](){ CloseImpl(); });
 }
 
 }  // namespace procyon
