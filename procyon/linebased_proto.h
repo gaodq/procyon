@@ -9,7 +9,7 @@ namespace procyon {
 
 class LineMsgHandler {
  public:
-  virtual ~LineMsgHandler() {}
+  virtual ~LineMsgHandler() = default;
 
   virtual void HandleNewLine(
       ConnectionPtr conn, std::unique_ptr<IOBuf>&& line) {
@@ -33,7 +33,6 @@ class LineBasedConn : public Connection {
 
  private:
   std::unique_ptr<LineMsgHandler> handler_;
-
   IOBuf buffer_;
 };
 

@@ -3,7 +3,6 @@
 #include "procyon/fixlength_proto.h"
 #include "procyon/io_thread.h"
 
-#include <google/protobuf/message.h>
 #include <unistd.h>
 #include <string.h>
 #include <iostream>
@@ -12,17 +11,28 @@
 #include <thread>
 #include <chrono>
 
-class ProtobufMsgHandler : public procyon::HTTPMsgHandler {
+#include "example.pb.h"
+
+class ProtobufMsgHandler : public procyon::FixLengthMsgHandler {
  public:
   virtual void HandleNewMsg(
-      procyon::ConnectionPtr conn, const std::string& msg) override {
+      procyon::ConnectionPtr conn,
+      std::unique_ptr<procyon::IOBuf>&& msg) override {
+    std::string m = msg->ToString();
+    example::Ping ping;
+    bool res = ping.ParseFromString(m);
+    if (!res) {
+      std::cout << "Parse failed" << std::endl;
+      return;
+    }
+    std::cout << "Receive ping: " << ping.address() << std::endl;
   }
 };
 
 class MyConnFactory : public procyon::ConnectionFactory {
  public:
   std::shared_ptr<procyon::Connection> NewConnection() override {
-    return std::make_shared<procyon::FixlengthConn>(new ProtobufMsgHandler);
+    return std::make_shared<procyon::FixLengthConn>(new ProtobufMsgHandler);
   }
 };
 
@@ -31,8 +41,6 @@ int main() {
   opts.port = 8099;
   opts.conn_factory = std::make_shared<MyConnFactory>();
   opts.worker_threads = std::make_shared<procyon::IOThreadPool>(1);
-
-  worker_threads.Start();
 
   procyon::Server server(opts);
   bool res = server.Start();
